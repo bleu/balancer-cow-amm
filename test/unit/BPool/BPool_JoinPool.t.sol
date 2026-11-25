@@ -63,7 +63,9 @@ contract BPoolJoinPool is BPoolBase {
     bPool.joinPool(0, new uint256[](2));
   }
 
-  function test_RevertWhen_PoolAmountOutIsTooSmall(uint256 amountOut) external {
+  function test_RevertWhen_PoolAmountOutIsTooSmall(
+    uint256 amountOut
+  ) external {
     amountOut = bound(amountOut, 0, (INIT_POOL_SUPPLY / 1e18) / 2 - 1);
     // it should revert
     vm.expectRevert(IBPool.BPool_InvalidPoolRatio.selector);

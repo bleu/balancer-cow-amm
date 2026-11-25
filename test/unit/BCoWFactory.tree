@@ -1,7 +1,7 @@
 BCoWFactoryTest::constructor
 └── when called
     ├── it should set solution settler
-    ├── it should set app data
+    ├── it should set hooks trampoline
     └── it should set BDao
 
 BCoWFactoryTest::_newBPool

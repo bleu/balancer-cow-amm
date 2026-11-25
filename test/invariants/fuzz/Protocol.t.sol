@@ -21,7 +21,7 @@ contract FuzzProtocol is EchidnaTest {
   BNum bnum;
 
   address solutionSettler;
-  bytes32 appData;
+  address hooksTrampoline = address(0x1234);
 
   FuzzERC20[] tokens;
   IBCoWPool pool;
@@ -38,7 +38,7 @@ contract FuzzProtocol is EchidnaTest {
   constructor() {
     solutionSettler = address(new MockSettler());
 
-    factory = new BCoWFactory(solutionSettler, appData);
+    factory = new BCoWFactory(solutionSettler, hooksTrampoline);
     bconst = new BConst();
     bmath = new BMath();
     bnum = new BNum();
@@ -77,7 +77,10 @@ contract FuzzProtocol is EchidnaTest {
   // Insure caller has enough token
   // Main objective is to have an arbitrary number of tokens in the pool, peripheral objective is another
   // test of min/max token bound (properties 20 and 21)
-  function setup_joinExitPool(bool _join, uint256 _amountBpt) public agentOrDeployer {
+  function setup_joinExitPool(
+    bool _join,
+    uint256 _amountBpt
+  ) public agentOrDeployer {
     if (_join) {
       uint256[] memory _maxAmountsIn;
 
@@ -237,8 +240,8 @@ contract FuzzProtocol is EchidnaTest {
       assert(
         // above max ratio
         _amountIn > bnum.call_bmul(tokens[_tokenIn].balanceOf(address(pool)), bconst.MAX_IN_RATIO())
-        // below min amount out
-        || _outComputed < _minAmountOut
+          // below min amount out
+          || _outComputed < _minAmountOut
       );
     }
   }
@@ -340,7 +343,10 @@ contract FuzzProtocol is EchidnaTest {
 
   /// @custom:property-id 7
   /// @custom:property total weight can be up to 50e18
-  function fuzz_totalWeightMax(uint256 _numberTokens, uint256[8] calldata _weights) public {
+  function fuzz_totalWeightMax(
+    uint256 _numberTokens,
+    uint256[8] calldata _weights
+  ) public {
     // Precondition
     IBPool _pool = IBPool(address(factory.newBPool(ERC20_NAME, ERC20_SYMBOL)));
 
@@ -485,7 +491,7 @@ contract FuzzProtocol is EchidnaTest {
     hevm.prank(currentCaller);
 
     // Action
-    try pool.commit(hex'1234') {
+    try pool.commit(hex'1234', 1) {
       // Postcondition
       assert(currentCaller == solutionSettler);
     } catch {

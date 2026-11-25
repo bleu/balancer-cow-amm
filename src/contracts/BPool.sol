@@ -81,7 +81,10 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   // solhint-disable-next-line no-unused-vars
-  constructor(string memory name, string memory symbol) BToken(name, symbol) {
+  constructor(
+    string memory name,
+    string memory symbol
+  ) BToken(name, symbol) {
     _controller = msg.sender;
     FACTORY = msg.sender;
     _swapFee = MIN_FEE;
@@ -89,7 +92,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function setSwapFee(uint256 swapFee) external _logs_ _lock_ _controller_ _notFinalized_ {
+  function setSwapFee(
+    uint256 swapFee
+  ) external _logs_ _lock_ _controller_ _notFinalized_ {
     if (swapFee < MIN_FEE) {
       revert BPool_FeeBelowMinimum();
     }
@@ -100,7 +105,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function setController(address newController) external _logs_ _lock_ _controller_ {
+  function setController(
+    address newController
+  ) external _logs_ _lock_ _controller_ {
     if (newController == address(0)) {
       revert BPool_AddressZero();
     }
@@ -122,7 +129,11 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function bind(address token, uint256 balance, uint256 denorm) external _logs_ _lock_ _controller_ _notFinalized_ {
+  function bind(
+    address token,
+    uint256 balance,
+    uint256 denorm
+  ) external _logs_ _lock_ _controller_ _notFinalized_ {
     if (_records[token].bound) {
       revert BPool_TokenAlreadyBound();
     }
@@ -151,7 +162,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function unbind(address token) external _logs_ _lock_ _controller_ _notFinalized_ {
+  function unbind(
+    address token
+  ) external _logs_ _lock_ _controller_ _notFinalized_ {
     if (!_records[token].bound) {
       revert BPool_TokenNotBound();
     }
@@ -171,7 +184,10 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn) external _logs_ _lock_ _finalized_ {
+  function joinPool(
+    uint256 poolAmountOut,
+    uint256[] calldata maxAmountsIn
+  ) external _logs_ _lock_ _finalized_ {
     uint256 poolTotal = totalSupply();
     uint256 ratio = bdiv(poolAmountOut, poolTotal);
     if (ratio == 0) {
@@ -197,7 +213,10 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function exitPool(uint256 poolAmountIn, uint256[] calldata minAmountsOut) external _logs_ _lock_ _finalized_ {
+  function exitPool(
+    uint256 poolAmountIn,
+    uint256[] calldata minAmountsOut
+  ) external _logs_ _lock_ _finalized_ {
     uint256 poolTotal = totalSupply();
     uint256 exitFee = bmul(poolAmountIn, EXIT_FEE);
     uint256 pAiAfterExitFee = bsub(poolAmountIn, exitFee);
@@ -341,7 +360,10 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function getSpotPrice(address tokenIn, address tokenOut) external view _viewlock_ returns (uint256) {
+  function getSpotPrice(
+    address tokenIn,
+    address tokenOut
+  ) external view _viewlock_ returns (uint256) {
     if (!_records[tokenIn].bound) {
       revert BPool_TokenNotBound();
     }
@@ -361,7 +383,10 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function getSpotPriceSansFee(address tokenIn, address tokenOut) external view _viewlock_ returns (uint256) {
+  function getSpotPriceSansFee(
+    address tokenIn,
+    address tokenOut
+  ) external view _viewlock_ returns (uint256) {
     if (!_records[tokenIn].bound) {
       revert BPool_TokenNotBound();
     }
@@ -386,7 +411,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function isBound(address token) external view returns (bool) {
+  function isBound(
+    address token
+  ) external view returns (bool) {
     return _records[token].bound;
   }
 
@@ -406,7 +433,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function getDenormalizedWeight(address token) external view _viewlock_ returns (uint256) {
+  function getDenormalizedWeight(
+    address token
+  ) external view _viewlock_ returns (uint256) {
     if (!_records[token].bound) {
       revert BPool_TokenNotBound();
     }
@@ -419,7 +448,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function getNormalizedWeight(address token) external view _viewlock_ returns (uint256) {
+  function getNormalizedWeight(
+    address token
+  ) external view _viewlock_ returns (uint256) {
     if (!_records[token].bound) {
       revert BPool_TokenNotBound();
     }
@@ -428,7 +459,9 @@ contract BPool is BToken, BMath, IBPool {
   }
 
   /// @inheritdoc IBPool
-  function getBalance(address token) external view _viewlock_ returns (uint256) {
+  function getBalance(
+    address token
+  ) external view _viewlock_ returns (uint256) {
     if (!_records[token].bound) {
       revert BPool_TokenNotBound();
     }
@@ -451,8 +484,10 @@ contract BPool is BToken, BMath, IBPool {
    * @dev Should be set to _MUTEX_FREE after a call, any other value will
    * be interpreted as locked
    */
-  function _setLock(bytes32 value) internal virtual {
-    assembly ("memory-safe") {
+  function _setLock(
+    bytes32 value
+  ) internal virtual {
+    assembly ('memory-safe') {
       tstore(_MUTEX_TRANSIENT_STORAGE_SLOT, value)
     }
   }
@@ -463,7 +498,11 @@ contract BPool is BToken, BMath, IBPool {
    * @param from The address to pull the tokens from
    * @param amount The amount of tokens to pull
    */
-  function _pullUnderlying(address token, address from, uint256 amount) internal virtual {
+  function _pullUnderlying(
+    address token,
+    address from,
+    uint256 amount
+  ) internal virtual {
     IERC20(token).safeTransferFrom(from, address(this), amount);
   }
 
@@ -473,7 +512,11 @@ contract BPool is BToken, BMath, IBPool {
    * @param to The address to push the tokens to
    * @param amount The amount of tokens to push
    */
-  function _pushUnderlying(address token, address to, uint256 amount) internal virtual {
+  function _pushUnderlying(
+    address token,
+    address to,
+    uint256 amount
+  ) internal virtual {
     IERC20(token).safeTransfer(to, amount);
   }
 
@@ -489,7 +532,10 @@ contract BPool is BToken, BMath, IBPool {
    * @param from The address to pull the pool tokens from
    * @param amount The amount of pool tokens to pull
    */
-  function _pullPoolShare(address from, uint256 amount) internal virtual {
+  function _pullPoolShare(
+    address from,
+    uint256 amount
+  ) internal virtual {
     _pull(from, amount);
   }
 
@@ -498,7 +544,10 @@ contract BPool is BToken, BMath, IBPool {
    * @param to The address to push the pool tokens to
    * @param amount The amount of pool tokens to push
    */
-  function _pushPoolShare(address to, uint256 amount) internal virtual {
+  function _pushPoolShare(
+    address to,
+    uint256 amount
+  ) internal virtual {
     _push(to, amount);
   }
 
@@ -506,7 +555,9 @@ contract BPool is BToken, BMath, IBPool {
    * @dev Mints an amount of pool tokens.
    * @param amount The amount of pool tokens to mint
    */
-  function _mintPoolShare(uint256 amount) internal virtual {
+  function _mintPoolShare(
+    uint256 amount
+  ) internal virtual {
     _mint(address(this), amount);
   }
 
@@ -514,7 +565,9 @@ contract BPool is BToken, BMath, IBPool {
    * @dev Burns an amount of pool tokens.
    * @param amount The amount of pool tokens to burn
    */
-  function _burnPoolShare(uint256 amount) internal virtual {
+  function _burnPoolShare(
+    uint256 amount
+  ) internal virtual {
     _burn(address(this), amount);
   }
 
@@ -525,7 +578,7 @@ contract BPool is BToken, BMath, IBPool {
    * allowing calls
    */
   function _getLock() internal view virtual returns (bytes32 value) {
-    assembly ("memory-safe") {
+    assembly ('memory-safe') {
       value := tload(_MUTEX_TRANSIENT_STORAGE_SLOT)
     }
   }

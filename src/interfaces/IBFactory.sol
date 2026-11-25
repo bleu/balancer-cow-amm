@@ -34,26 +34,35 @@ interface IBFactory {
    * @param symbol The symbol of the Pool ERC20 token
    * @return bPool The new BPool
    */
-  function newBPool(string memory name, string memory symbol) external returns (IBPool bPool);
+  function newBPool(
+    string memory name,
+    string memory symbol
+  ) external returns (IBPool bPool);
 
   /**
    * @notice Sets the BDao address in the factory
    * @param bDao The new BDao address
    */
-  function setBDao(address bDao) external;
+  function setBDao(
+    address bDao
+  ) external;
 
   /**
    * @notice Collects the fees of a pool and transfers it to BDao address
    * @param bPool The address of the pool to collect fees from
    */
-  function collect(IBPool bPool) external;
+  function collect(
+    IBPool bPool
+  ) external;
 
   /**
    * @notice Checks if an address is a BPool created from this factory
    * @param bPool The address to check
    * @return isBPool True if the address is a BPool, False otherwise
    */
-  function isBPool(address bPool) external view returns (bool isBPool);
+  function isBPool(
+    address bPool
+  ) external view returns (bool isBPool);
 
   /**
    * @notice Gets the BDao address

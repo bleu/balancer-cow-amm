@@ -184,3 +184,7 @@ to the ordinary AMM. The final path difference was $120.12. The protected LPs
 still lost $12.80 in reference value during trading; recovered surplus is not
 the same as positive trading P&L. These values describe this synthetic scenario,
 not an expected market return.
+
+## Curated order accounting
+
+Pool quotes are signed off-chain by the local manager acting as curator and settled through the canonical trampoline hooks. Reports include the curator escrow among the accounted actors. Fee events must match escrow balance changes; LP bid scores and historical verification subtract those fees. The opportunity decomposition includes the curator's fee alongside LP surplus, solver proceeds and route cost. Balancer's inverse quote can differ slightly from its forward quote, so a nominal on-curve quote may still pay a tiny fee; it must satisfy the pool's forward curve check after payment.

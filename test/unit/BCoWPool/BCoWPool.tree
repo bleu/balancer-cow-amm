@@ -5,7 +5,7 @@ BCoWPool::constructor
     ├── it should set the domain separator
     ├── it should query the solution settler for the vault relayer
     ├── it should set the vault relayer
-    └── it should set the app data
+    └── it should set curator settings
 
 BCoWPool::_afterFinalize
 ├── when one of the tokens returns false

@@ -46,7 +46,11 @@ contract BPool is BPoolBase, BMath {
     bPool.set__controller(controller);
   }
 
-  function test_ConstructorWhenCalled(address _deployer, string memory _name, string memory _symbol) external {
+  function test_ConstructorWhenCalled(
+    address _deployer,
+    string memory _name,
+    string memory _symbol
+  ) external {
     vm.startPrank(_deployer);
     MockBPool _newBPool = new MockBPool(_name, _symbol);
 
@@ -101,7 +105,9 @@ contract BPool is BPoolBase, BMath {
     bPool.setSwapFee(MAX_FEE + 1);
   }
 
-  function test_SetSwapFeeWhenPreconditionsAreMet(uint256 _swapFee) external {
+  function test_SetSwapFeeWhenPreconditionsAreMet(
+    uint256 _swapFee
+  ) external {
     bPool.set__finalized(false);
     vm.prank(controller);
     _swapFee = bound(_swapFee, MIN_FEE, MAX_FEE);
@@ -138,7 +144,9 @@ contract BPool is BPoolBase, BMath {
     bPool.setController(address(0));
   }
 
-  function test_SetControllerWhenPreconditionsAreMet(address _controller) external {
+  function test_SetControllerWhenPreconditionsAreMet(
+    address _controller
+  ) external {
     vm.prank(controller);
     vm.assume(_controller != address(0));
 
@@ -164,19 +172,25 @@ contract BPool is BPoolBase, BMath {
     assertFalse(bPool.isFinalized());
   }
 
-  function test_IsBoundWhenTokenIsBound(address _token) external {
+  function test_IsBoundWhenTokenIsBound(
+    address _token
+  ) external {
     bPool.set__records(_token, IBPool.Record({bound: true, index: 0, denorm: 0}));
     // it returns true
     assertTrue(bPool.isBound(_token));
   }
 
-  function test_IsBoundWhenTokenIsNOTBound(address _token) external {
+  function test_IsBoundWhenTokenIsNOTBound(
+    address _token
+  ) external {
     bPool.set__records(_token, IBPool.Record({bound: false, index: 0, denorm: 0}));
     // it returns false
     assertFalse(bPool.isBound(_token));
   }
 
-  function test_GetNumTokensWhenCalled(uint256 _tokensToAdd) external {
+  function test_GetNumTokensWhenCalled(
+    uint256 _tokensToAdd
+  ) external {
     _tokensToAdd = bound(_tokensToAdd, 0, MAX_BOUND_TOKENS);
     _setRandomTokens(_tokensToAdd);
     // it returns number of tokens
@@ -285,7 +299,9 @@ contract BPool is BPoolBase, BMath {
     bPool.getBalance(unknownToken);
   }
 
-  function test_GetBalanceWhenPreconditionsAreMet(uint256 tokenBalance) external {
+  function test_GetBalanceWhenPreconditionsAreMet(
+    uint256 tokenBalance
+  ) external {
     vm.mockCall(tokens[0], abi.encodePacked(IERC20.balanceOf.selector), abi.encode(tokenBalance));
     // it queries token balance
     vm.expectCall(tokens[0], abi.encodeWithSelector(IERC20.balanceOf.selector));
@@ -380,7 +396,9 @@ contract BPool is BPoolBase, BMath {
     assertEq(bPool.getSpotPriceSansFee(tokens[0], tokens[1]), spotPriceWithoutFee);
   }
 
-  function test_FinalizeRevertWhen_CallerIsNotController(address _caller) external {
+  function test_FinalizeRevertWhen_CallerIsNotController(
+    address _caller
+  ) external {
     vm.assume(_caller != controller);
     vm.startPrank(_caller);
     // it should revert
@@ -463,7 +481,9 @@ contract BPool is BPoolBase, BMath {
     bPool.call__pushUnderlying(transferredToken, transferRecipient, transferredAmount);
   }
 
-  function test__pushUnderlyingRevertWhen_UnderlyingTokenRevertsWithData(bytes memory errorData) external {
+  function test__pushUnderlyingRevertWhen_UnderlyingTokenRevertsWithData(
+    bytes memory errorData
+  ) external {
     vm.assume(keccak256(errorData) != keccak256(bytes('')));
     vm.mockCallRevert(
       transferredToken,
@@ -521,7 +541,9 @@ contract BPool is BPoolBase, BMath {
     bPool.call__pullUnderlying(transferredToken, transferFromSpender, transferredAmount);
   }
 
-  function test__pullUnderlyingRevertWhen_UnderlyingTokenRevertsWithData(bytes memory errorData) external {
+  function test__pullUnderlyingRevertWhen_UnderlyingTokenRevertsWithData(
+    bytes memory errorData
+  ) external {
     vm.assume(keccak256(errorData) != keccak256(bytes('')));
     vm.mockCallRevert(
       transferredToken,

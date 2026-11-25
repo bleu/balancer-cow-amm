@@ -69,7 +69,9 @@ contract BPoolSwapExactAmountOut is BPoolBase, BNum {
     bPool.swapExactAmountOut(tokenIn, expectedAmountIn, makeAddr('unkonwn token'), tokenAmountOut, spotPriceAfterSwap);
   }
 
-  function test_RevertWhen_TokenOutExceedsMaxAllowedRatio(uint256 tokenAmountOut_) external {
+  function test_RevertWhen_TokenOutExceedsMaxAllowedRatio(
+    uint256 tokenAmountOut_
+  ) external {
     tokenAmountOut_ = bound(tokenAmountOut_, bmul(tokenOutBalance, MAX_OUT_RATIO + 1), type(uint256).max);
     // it should revert
     vm.expectRevert(IBPool.BPool_TokenAmountOutAboveMaxOut.selector);

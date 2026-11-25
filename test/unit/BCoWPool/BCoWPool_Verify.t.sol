@@ -69,7 +69,9 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_RevertWhen_OrderValidityIsTooLong(uint256 _timeOffset) external {
+  function test_RevertWhen_OrderValidityIsTooLong(
+    uint256 _timeOffset
+  ) external {
     _timeOffset = bound(_timeOffset, MAX_ORDER_DURATION + 1, type(uint32).max - block.timestamp);
     validOrder.validTo = uint32(block.timestamp + _timeOffset);
     // it should revert
@@ -77,7 +79,9 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_RevertWhen_FeeAmountIsNotZero(uint256 _fee) external {
+  function test_RevertWhen_FeeAmountIsNotZero(
+    uint256 _fee
+  ) external {
     _fee = bound(_fee, 1, type(uint256).max);
     validOrder.feeAmount = _fee;
     // it should revert
@@ -85,7 +89,9 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_RevertWhen_OrderKindIsNotKIND_SELL(bytes32 _orderKind) external {
+  function test_RevertWhen_OrderKindIsNotKIND_SELL(
+    bytes32 _orderKind
+  ) external {
     vm.assume(_orderKind != GPv2Order.KIND_SELL);
     validOrder.kind = _orderKind;
     // it should revert
@@ -93,7 +99,9 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_RevertWhen_BuyTokenBalanceFlagIsNotERC20Balances(bytes32 _balanceKind) external {
+  function test_RevertWhen_BuyTokenBalanceFlagIsNotERC20Balances(
+    bytes32 _balanceKind
+  ) external {
     vm.assume(_balanceKind != GPv2Order.BALANCE_ERC20);
     validOrder.buyTokenBalance = _balanceKind;
     // it should revert
@@ -101,7 +109,9 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_RevertWhen_SellTokenBalanceFlagIsNotERC20Balances(bytes32 _balanceKind) external {
+  function test_RevertWhen_SellTokenBalanceFlagIsNotERC20Balances(
+    bytes32 _balanceKind
+  ) external {
     vm.assume(_balanceKind != GPv2Order.BALANCE_ERC20);
     validOrder.sellTokenBalance = _balanceKind;
     // it should revert
@@ -109,7 +119,9 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_RevertWhen_OrderBuyAmountExceedsMaxRatio(uint256 _buyAmount) external {
+  function test_RevertWhen_OrderBuyAmountExceedsMaxRatio(
+    uint256 _buyAmount
+  ) external {
     _buyAmount = bound(_buyAmount, bmul(tokenInBalance, MAX_IN_RATIO) + 1, type(uint256).max);
     validOrder.buyAmount = _buyAmount;
     // it should revert
@@ -124,8 +136,10 @@ contract BCoWPoolVerify is BCoWPoolBase {
     bCoWPool.verify(validOrder);
   }
 
-  function test_WhenPreconditionsAreMet(uint256 _sellAmount) external {
-    _sellAmount = bound(_sellAmount, 0, validOrder.sellAmount);
+  function test_WhenPreconditionsAreMet(
+    uint256 _sellAmount
+  ) external {
+    _sellAmount = bound(_sellAmount, 1, validOrder.sellAmount);
     validOrder.sellAmount = _sellAmount;
     // it should query the balance of the buy token
     vm.expectCall(tokenIn, abi.encodeCall(IERC20.balanceOf, (address(bCoWPool))));

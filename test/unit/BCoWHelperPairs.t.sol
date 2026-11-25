@@ -116,19 +116,20 @@ contract BCoWHelperPairsTest is BCoWHelperValidationFixture {
         0
       )
     );
-    assertEq(order.appData, factory.APP_DATA());
+    bytes32 saved = order.appData;
+    order.appData = bytes32(0);
+    bytes32 h0 = GPv2Order.hash(order, pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    order.appData = saved;
+    assertEq(order.appData, pool.appDataHash(h0, order.buyAmount));
     assertEq(order.feeAmount, 0);
     assertEq(order.kind, GPv2Order.KIND_SELL);
     assertEq(order.receiver, address(0));
     assertEq(pre.length, 1);
     assertEq(pre[0].target, address(pool));
     assertEq(pre[0].value, 0);
-    assertEq(
-      pre[0].callData,
-      abi.encodeWithSelector(pool.commit.selector, GPv2Order.hash(order, pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR()))
-    );
-    assertEq(post.length, 0);
-    assertEq(sig, abi.encodePacked(address(pool), abi.encode(order)));
+    assertEq(pre[0].callData, abi.encodeCall(pool.commit, (h0, order.buyAmount)));
+    assertEq(post.length, 1);
+    assertEq(sig, abi.encodePacked(address(pool), abi.encode(order, uint256(0), bytes(''))));
   }
 
   function test_InvalidPairsAndPools() public {

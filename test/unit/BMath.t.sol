@@ -44,7 +44,10 @@ contract BMathTest is Test, BConst {
     bMath.calcSpotPrice(balanceIn, weightIn, balanceOut, _weightOut, swapFee);
   }
 
-  function test_CalcSpotPriceRevertWhen_WeightedTokenBalanceOutIsZero(uint256 _balanceOut, uint256 _weightOut) external {
+  function test_CalcSpotPriceRevertWhen_WeightedTokenBalanceOutIsZero(
+    uint256 _balanceOut,
+    uint256 _weightOut
+  ) external {
     _weightOut = bound(_weightOut, MIN_WEIGHT, MAX_WEIGHT);
     _balanceOut = bound(_balanceOut, 0, _weightOut / (2 * BONE + 1)); // floors to zero
 
@@ -55,7 +58,9 @@ contract BMathTest is Test, BConst {
     bMath.calcSpotPrice(balanceIn, weightIn, _balanceOut, _weightOut, swapFee);
   }
 
-  function test_CalcSpotPriceRevertWhen_SwapFeeGreaterThanBONE(uint256 _swapFee) external {
+  function test_CalcSpotPriceRevertWhen_SwapFeeGreaterThanBONE(
+    uint256 _swapFee
+  ) external {
     _swapFee = bound(_swapFee, BONE + 1, type(uint256).max);
 
     // it should revert
@@ -103,7 +108,9 @@ contract BMathTest is Test, BConst {
     bMath.calcOutGivenIn(balanceIn, weightIn, balanceOut, _weightOut, amountIn, swapFee);
   }
 
-  function test_CalcOutGivenInRevertWhen_SwapFeeGreaterThanBONE(uint256 _swapFee) external {
+  function test_CalcOutGivenInRevertWhen_SwapFeeGreaterThanBONE(
+    uint256 _swapFee
+  ) external {
     _swapFee = bound(_swapFee, BONE + 1, type(uint256).max);
 
     // it should revert
@@ -113,7 +120,9 @@ contract BMathTest is Test, BConst {
     bMath.calcOutGivenIn(balanceIn, weightIn, balanceOut, weightOut, amountIn, _swapFee);
   }
 
-  function test_CalcOutGivenInRevertWhen_TokenAmountInTooBig(uint256 _amountIn) external {
+  function test_CalcOutGivenInRevertWhen_TokenAmountInTooBig(
+    uint256 _amountIn
+  ) external {
     _amountIn = bound(_amountIn, type(uint256).max / (BONE - swapFee) + 1, type(uint256).max);
 
     // it should revert
@@ -239,7 +248,9 @@ contract BMathTest is Test, BConst {
     bMath.calcInGivenOut(balanceIn, weightIn, _balanceOut, weightOut, _amountOut, swapFee);
   }
 
-  function test_CalcInGivenOutRevertWhen_TokenAmountOutEqualsTokenBalanceOut(uint256 _amount) external {
+  function test_CalcInGivenOutRevertWhen_TokenAmountOutEqualsTokenBalanceOut(
+    uint256 _amount
+  ) external {
     _amount = bound(_amount, 1, type(uint256).max / BONE);
 
     // it should revert
@@ -249,7 +260,9 @@ contract BMathTest is Test, BConst {
     bMath.calcInGivenOut(balanceIn, weightIn, _amount, weightOut, _amount, swapFee);
   }
 
-  function test_CalcInGivenOutRevertWhen_SwapFeeGreaterThanBONE(uint256 _swapFee) external {
+  function test_CalcInGivenOutRevertWhen_SwapFeeGreaterThanBONE(
+    uint256 _swapFee
+  ) external {
     _swapFee = bound(_swapFee, BONE + 1, type(uint256).max);
 
     // it should revert

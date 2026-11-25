@@ -8,7 +8,10 @@ import {ERC20} from '@openzeppelin/contracts/token/ERC20/ERC20.sol';
  * @notice Balancer Pool Token base contract, providing ERC20 functionality.
  */
 contract BToken is ERC20 {
-  constructor(string memory name, string memory symbol) ERC20(name, symbol) {}
+  constructor(
+    string memory name,
+    string memory symbol
+  ) ERC20(name, symbol) {}
 
   /**
    * @notice Increase the allowance of the spender.
@@ -16,7 +19,10 @@ contract BToken is ERC20 {
    * @param amount The amount of tokens to increase the allowance by.
    * @return success True if the operation is successful.
    */
-  function increaseApproval(address spender, uint256 amount) external returns (bool success) {
+  function increaseApproval(
+    address spender,
+    uint256 amount
+  ) external returns (bool success) {
     _approve(msg.sender, spender, allowance(msg.sender, spender) + amount);
     success = true;
   }
@@ -27,7 +33,10 @@ contract BToken is ERC20 {
    * @param amount The amount of tokens to decrease the allowance by.
    * @return success True if the operation is successful.
    */
-  function decreaseApproval(address spender, uint256 amount) external returns (bool success) {
+  function decreaseApproval(
+    address spender,
+    uint256 amount
+  ) external returns (bool success) {
     uint256 oldValue = allowance(msg.sender, spender);
     if (amount > oldValue) {
       _approve(msg.sender, spender, 0);
@@ -42,7 +51,10 @@ contract BToken is ERC20 {
    * @param to The address which you want to transfer to.
    * @param amount The amount of tokens to be transferred.
    */
-  function _push(address to, uint256 amount) internal virtual {
+  function _push(
+    address to,
+    uint256 amount
+  ) internal virtual {
     _transfer(address(this), to, amount);
   }
 
@@ -51,7 +63,10 @@ contract BToken is ERC20 {
    * @param from The address which you want to transfer from.
    * @param amount The amount of tokens to be transferred.
    */
-  function _pull(address from, uint256 amount) internal virtual {
+  function _pull(
+    address from,
+    uint256 amount
+  ) internal virtual {
     _transfer(from, address(this), amount);
   }
 }

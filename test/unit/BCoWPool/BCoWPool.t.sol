@@ -22,6 +22,13 @@ contract BCoWPool is BCoWPoolBase {
   function setUp() public virtual override {
     super.setUp();
 
+    vm.mockCall(
+      tokens[0], abi.encodeWithSignature('balanceOf(address)', address(bCoWPool)), abi.encode(uint256(100e18))
+    );
+    vm.mockCall(
+      tokens[1], abi.encodeWithSignature('balanceOf(address)', address(bCoWPool)), abi.encode(uint256(100e18))
+    );
+    bCoWPool.set__finalized(true);
     bCoWPool.set__tokens(tokens);
     bCoWPool.set__records(tokens[0], IBPool.Record({bound: true, index: 0, denorm: tokenWeight}));
     bCoWPool.set__records(tokens[1], IBPool.Record({bound: true, index: 1, denorm: tokenWeight}));
@@ -35,8 +42,7 @@ contract BCoWPool is BCoWPoolBase {
   function test_ConstructorWhenCalled(
     address _settler,
     bytes32 _separator,
-    address _relayer,
-    bytes32 _appData
+    address _relayer
   ) external {
     assumeNotForgeAddress(_settler);
     vm.mockCall(_settler, abi.encodePacked(ISettlement.domainSeparator.selector), abi.encode(_separator));
@@ -45,7 +51,7 @@ contract BCoWPool is BCoWPoolBase {
     vm.expectCall(_settler, abi.encodePacked(ISettlement.domainSeparator.selector));
     // it should query the solution settler for the vault relayer
     vm.expectCall(_settler, abi.encodePacked(ISettlement.vaultRelayer.selector));
-    MockBCoWPool pool = new MockBCoWPool(_settler, _appData, ERC20_NAME, ERC20_SYMBOL);
+    MockBCoWPool pool = new MockBCoWPool(_settler, ERC20_NAME, ERC20_SYMBOL);
     // it should set the solution settler
     assertEq(address(pool.SOLUTION_SETTLER()), _settler);
     // it should set the domain separator
@@ -53,7 +59,7 @@ contract BCoWPool is BCoWPoolBase {
     // it should set the vault relayer
     assertEq(pool.VAULT_RELAYER(), _relayer);
     // it should set the app data
-    assertEq(pool.APP_DATA(), _appData);
+    assertEq(pool.curator(), address(this));
   }
 
   function test__afterFinalizeRevertWhen_OneOfTheTokensReturnsFalse() external {
@@ -82,7 +88,9 @@ contract BCoWPool is BCoWPoolBase {
     bCoWPool.call__afterFinalize();
   }
 
-  function test__afterFinalizeRevertWhen_OneOfTheTokensRevertsWithData(bytes memory errorData) external {
+  function test__afterFinalizeRevertWhen_OneOfTheTokensRevertsWithData(
+    bytes memory errorData
+  ) external {
     vm.assume(keccak256(errorData) != keccak256(bytes('')));
     vm.mockCallRevert(
       tokens[1], abi.encodeWithSelector(IERC20.approve.selector, vaultRelayer, type(uint256).max), errorData
@@ -106,7 +114,9 @@ contract BCoWPool is BCoWPoolBase {
     bCoWPool.call__afterFinalize();
   }
 
-  function test__afterFinalizeWhenFactorysLogBCoWPoolReverts(bytes memory revertData) external {
+  function test__afterFinalizeWhenFactorysLogBCoWPoolReverts(
+    bytes memory revertData
+  ) external {
     vm.mockCallRevert(address(this), abi.encodeCall(IBCoWFactory.logBCoWPool, ()), revertData);
     // it emits a COWAMMPoolCreated event
     vm.expectEmit(address(bCoWPool));
@@ -114,25 +124,32 @@ contract BCoWPool is BCoWPoolBase {
     bCoWPool.call__afterFinalize();
   }
 
-  function test_CommitRevertWhen_ReentrancyLockIsSet(bytes32 lockValue) external {
+  function test_CommitRevertWhen_ReentrancyLockIsSet(
+    bytes32 lockValue
+  ) external {
     vm.assume(lockValue != _MUTEX_FREE);
     bCoWPool.call__setLock(lockValue);
     // it should revert
     vm.expectRevert(IBPool.BPool_Reentrancy.selector);
-    bCoWPool.commit(commitmentValue);
+    bCoWPool.commit(commitmentValue, 1);
   }
 
-  function test_CommitRevertWhen_SenderIsNotSolutionSettler(address caller) external {
+  function test_CommitRevertWhen_SenderIsNotSolutionSettler(
+    address caller
+  ) external {
     vm.assume(caller != cowSolutionSettler);
     vm.prank(caller);
     // it should revert
     vm.expectRevert(abi.encodeWithSelector(IBCoWPool.CommitOutsideOfSettlement.selector));
-    bCoWPool.commit(commitmentValue);
+    bCoWPool.commit(commitmentValue, 1);
   }
 
-  function test_CommitWhenPreconditionsAreMet(bytes32 commitmentValue_) external {
+  function test_CommitWhenPreconditionsAreMet(
+    bytes32 commitmentValue_
+  ) external {
+    vm.assume(commitmentValue_ != bytes32(0) && commitmentValue_ != _MUTEX_TAKEN);
     vm.prank(cowSolutionSettler);
-    bCoWPool.commit(commitmentValue_);
+    bCoWPool.commit(commitmentValue_, 1);
     // it should set the transient reentrancy lock
     assertEq(bCoWPool.call__getLock(), commitmentValue_);
   }

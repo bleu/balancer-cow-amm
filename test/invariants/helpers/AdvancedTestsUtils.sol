@@ -6,15 +6,23 @@ import {MockERC20} from 'forge-std/mocks/MockERC20.sol';
 import {SymTest} from 'halmos-cheatcodes/src/SymTest.sol';
 
 interface IHevm {
-  function prank(address) external;
+  function prank(
+    address
+  ) external;
 }
 
 contract FuzzERC20 is MockERC20 {
-  function mint(address _to, uint256 _amount) public {
+  function mint(
+    address _to,
+    uint256 _amount
+  ) public {
     _mint(_to, _amount);
   }
 
-  function burn(address _from, uint256 _amount) public {
+  function burn(
+    address _from,
+    uint256 _amount
+  ) public {
     _burn(_from, _amount);
   }
 }
@@ -31,7 +39,9 @@ contract AgentsHandler {
     _;
   }
 
-  constructor(uint256 _numAgents) {
+  constructor(
+    uint256 _numAgents
+  ) {
     for (uint256 i = 0; i < _numAgents; i++) {
       agents.push(address(bytes20(keccak256(abi.encodePacked(i)))));
     }
@@ -53,7 +63,11 @@ contract EchidnaTest is AgentsHandler {
 
   constructor() AgentsHandler(5) {}
 
-  function clamp(uint256 _value, uint256 _min, uint256 _max) internal pure returns (uint256) {
+  function clamp(
+    uint256 _value,
+    uint256 _min,
+    uint256 _max
+  ) internal pure returns (uint256) {
     if (_min > _max) {
       assert(false);
     }

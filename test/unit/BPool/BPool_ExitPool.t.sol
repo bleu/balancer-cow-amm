@@ -67,7 +67,9 @@ contract BPoolExitPool is BPoolBase, BNum {
     bPool.exitPool(0, minAmountsOut);
   }
 
-  function test_RevertWhen_PoolAmountInIsTooSmall(uint256 amountIn) external {
+  function test_RevertWhen_PoolAmountInIsTooSmall(
+    uint256 amountIn
+  ) external {
     amountIn = bound(amountIn, 0, (INIT_POOL_SUPPLY / 1e18) / 2 - 1);
     // it should revert
     vm.expectRevert(IBPool.BPool_InvalidPoolRatio.selector);

@@ -19,6 +19,7 @@ import {GPv2TradeEncoder} from '@composable-cow/test/vendored/GPv2TradeEncoder.s
 
 import {BCoWFactory} from 'contracts/BCoWFactory.sol';
 import {BCoWHelper} from 'contracts/BCoWHelper.sol';
+import {BCoWPool} from 'contracts/BCoWPool.sol';
 
 contract BCoWHelperIntegrationTest is Test {
   using GPv2Order for GPv2Order.Data;
@@ -43,7 +44,7 @@ contract BCoWHelperIntegrationTest is Test {
   IERC20 private constant WETH = IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
 
   uint256 constant TEN_PERCENT = 0.1 ether;
-  uint256 constant ONE_IN_A_BILLION = 0.000000001 ether;
+  uint256 constant ONE_IN_A_BILLION = 0.000_000_001 ether;
   // NOTE: 1 ETH = 1000 DAI
   uint256 constant EQUAL_WEIGHT_INITIAL_DAI_BALANCE = 1000 ether;
   uint256 constant EQUAL_WEIGHT_INITIAL_WETH_BALANCE = 1 ether;
@@ -60,7 +61,7 @@ contract BCoWHelperIntegrationTest is Test {
 
     vaultRelayer = address(settlement.vaultRelayer());
 
-    ammFactory = new BCoWFactory(address(settlement), bytes32('appData'), bdaoMsig);
+    ammFactory = new BCoWFactory(address(settlement), address(0x1234), bdaoMsig);
     helper = new BCoWHelper(address(ammFactory));
 
     deal(address(DAI), lp, type(uint256).max, false);
@@ -85,6 +86,8 @@ contract BCoWHelperIntegrationTest is Test {
     basicPool.finalize();
     weightedPool.finalize();
 
+    BCoWPool(address(basicPool)).setCurator(vm.addr(0xc01234));
+    BCoWPool(address(weightedPool)).setCurator(vm.addr(0xc01234));
     vm.stopPrank();
   }
 
@@ -113,7 +116,9 @@ contract BCoWHelperIntegrationTest is Test {
     assertApproxEqRel(postSpotPrice, EXPECTED_FINAL_SPOT_PRICE, ONE_IN_A_BILLION);
   }
 
-  function _executeHelperOrder(IBPool pool) internal {
+  function _executeHelperOrder(
+    IBPool pool
+  ) internal {
     address[] memory tokens = helper.tokens(address(pool));
     uint256 daiIndex = 0;
     uint256 wethIndex = 1;
@@ -140,9 +145,12 @@ contract BCoWHelperIntegrationTest is Test {
     bytes memory sig;
     (ammOrder, preInteractions, postInteractions, sig) = helper.order(address(pool), prices);
 
+    (uint8 v, bytes32 r, bytes32 s) =
+      vm.sign(0xc01234, BCoWPool(address(pool)).curatorDigest(ammOrder.hash(settlement.domainSeparator()), 0));
+    sig = abi.encodePacked(address(pool), abi.encode(ammOrder, uint256(0), abi.encodePacked(r, s, v)));
     // We expect a commit interaction in pre interactions
     assertEq(preInteractions.length, 1);
-    assertEq(postInteractions.length, 0);
+    assertEq(postInteractions.length, 1);
 
     // Because of how we changed the price, we expect to buy WETH
     assertEq(address(ammOrder.sellToken), address(DAI));

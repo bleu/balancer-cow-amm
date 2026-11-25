@@ -8,19 +8,28 @@ import {BNum} from 'contracts/BNum.sol';
 import {Test} from 'forge-std/Test.sol';
 
 contract FuzzBNum is BNum, EchidnaTest, Test {
-  function bsub_exposed(uint256 a, uint256 b) external pure returns (uint256) {
+  function bsub_exposed(
+    uint256 a,
+    uint256 b
+  ) external pure returns (uint256) {
     return bsub(a, b);
   }
 
-  function bdiv_exposed(uint256 _a, uint256 _b) external pure returns (uint256) {
+  function bdiv_exposed(
+    uint256 _a,
+    uint256 _b
+  ) external pure returns (uint256) {
     return bdiv(_a, _b);
   }
+
   /////////////////////////////////////////////////////////////////////
   //                           Bnum::btoi                            //
   /////////////////////////////////////////////////////////////////////
 
   // btoi should always return the floor(a / BONE) == (a - a%BONE) / BONE
-  function btoi_alwaysFloor(uint256 _input) public pure {
+  function btoi_alwaysFloor(
+    uint256 _input
+  ) public pure {
     // action
     uint256 _result = btoi(_input);
 
@@ -33,7 +42,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // btoi should always return the floor(a / BONE) == (a - a%BONE) / BONE
-  function bfloor_shouldAlwaysRoundDown(uint256 _input) public pure {
+  function bfloor_shouldAlwaysRoundDown(
+    uint256 _input
+  ) public pure {
     // action
     uint256 _result = bfloor(_input);
 
@@ -46,7 +57,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // badd should be commutative
-  function baddCommut(uint256 _a, uint256 _b) public pure {
+  function baddCommut(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result1 = badd(_a, _b);
     uint256 _result2 = badd(_b, _a);
@@ -56,7 +70,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // badd should be associative
-  function badd_assoc(uint256 _a, uint256 _b, uint256 _c) public pure {
+  function badd_assoc(
+    uint256 _a,
+    uint256 _b,
+    uint256 _c
+  ) public pure {
     // action
     uint256 _result1 = badd(badd(_a, _b), _c);
     uint256 _result2 = badd(_a, badd(_b, _c));
@@ -66,7 +84,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // 0 should be identity for badd
-  function badd_zeroIdentity(uint256 _a) public pure {
+  function badd_zeroIdentity(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = badd(_a, 0);
 
@@ -75,7 +95,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // badd result should always be gte its terms
-  function badd_resultGTE(uint256 _a, uint256 _b) public pure {
+  function badd_resultGTE(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result = badd(_a, _b);
 
@@ -85,7 +108,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // badd should never sum terms which have a sum gt uint max
-  function badd_overflow(uint256 _a, uint256 _b) public pure {
+  function badd_overflow(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result = badd(_a, _b);
 
@@ -94,7 +120,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // badd should have bsub as reverse operation
-  function badd_bsub(uint256 _a, uint256 _b) public pure {
+  function badd_bsub(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result = badd(_a, _b);
     uint256 _result2 = bsub(_result, _b);
@@ -108,7 +137,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // bsub should not be commutative
-  function bsub_notCommut(uint256 _a, uint256 _b) public pure {
+  function bsub_notCommut(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     require(_a != _b);
 
@@ -121,7 +153,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bsub should not be associative
-  function bsub_notAssoc(uint256 _a, uint256 _b, uint256 _c) public pure {
+  function bsub_notAssoc(
+    uint256 _a,
+    uint256 _b,
+    uint256 _c
+  ) public pure {
     // precondition
     require(_a != _b && _b != _c && _a != _c);
     require(_a != 0 && _b != 0 && _c != 0);
@@ -135,7 +171,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bsub should have 0 as identity
-  function bsub_zeroIdentity(uint256 _a) public pure {
+  function bsub_zeroIdentity(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bsub(_a, 0);
 
@@ -144,7 +182,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bsub result should always be lte a (underflow reverts)
-  function bsub_resultLTE(uint256 _a, uint256 _b) public pure {
+  function bsub_resultLTE(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result = bsub(_a, _b);
 
@@ -153,7 +194,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bsub should alway revert if b > a
-  function bsub_revert(uint256 _a, uint256 _b) public {
+  function bsub_revert(
+    uint256 _a,
+    uint256 _b
+  ) public {
     // Precondition
     _b = clamp(_b, _a + 1, type(uint256).max);
 
@@ -169,7 +213,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // bsubSign result should always be negative if b > a
-  function bsubSign_negative(uint256 _a, uint256 _b) public {
+  function bsubSign_negative(
+    uint256 _a,
+    uint256 _b
+  ) public {
     // precondition
     _b = clamp(_b, _a + 1, type(uint256).max);
 
@@ -182,7 +229,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bsubSign result should always be positive if a > b
-  function bsubSign_positive(uint256 _a, uint256 _b) public {
+  function bsubSign_positive(
+    uint256 _a,
+    uint256 _b
+  ) public {
     // precondition
     _b = clamp(_b, 0, type(uint256).max - 1);
     _a = clamp(_a, _b + 1, type(uint256).max);
@@ -196,7 +246,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bsubSign result should always be 0 if a == b
-  function bsubSign_zero(uint256 _a) public pure {
+  function bsubSign_zero(
+    uint256 _a
+  ) public pure {
     // action
     (uint256 _result, bool _flag) = bsubSign(_a, _a);
 
@@ -210,7 +262,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // bmul should be commutative
-  function bmul_commutative(uint256 _a, uint256 _b) public pure {
+  function bmul_commutative(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result1 = bmul(_a, _b);
     uint256 _result2 = bmul(_b, _a);
@@ -220,7 +275,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bmul should be associative
-  function bmul_associative(uint256 _a, uint256 _b, uint256 _c) public {
+  function bmul_associative(
+    uint256 _a,
+    uint256 _b,
+    uint256 _c
+  ) public {
     // precondition
     _c = clamp(_c, BONE, 9_999_999_999_999 * BONE);
     _b = clamp(_b, BONE, 9_999_999_999_999 * BONE);
@@ -235,7 +294,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bmul should be distributive
-  function bmul_distributive(uint256 _a, uint256 _b, uint256 _c) public {
+  function bmul_distributive(
+    uint256 _a,
+    uint256 _b,
+    uint256 _c
+  ) public {
     _c = clamp(_c, BONE, 10_000 * BONE);
     _b = clamp(_b, BONE, 10_000 * BONE);
     _a = clamp(_a, BONE, 10_000 * BONE);
@@ -247,7 +310,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // 1 should be identity for bmul
-  function bmul_identity(uint256 _a) public {
+  function bmul_identity(
+    uint256 _a
+  ) public {
     _a = clamp(_a, BONE, 9_999_999_999_999 * BONE);
 
     uint256 _result = bmul(_a, BONE);
@@ -256,7 +321,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // 0 should be absorbing for mul
-  function bmul_absorbing(uint256 _a) public pure {
+  function bmul_absorbing(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bmul(_a, 0);
 
@@ -265,7 +332,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bmul result should always be gte a and b
-  function bmul_resultGTE(uint256 _a, uint256 _b) public {
+  function bmul_resultGTE(
+    uint256 _a,
+    uint256 _b
+  ) public {
     // Precondition
     _a = clamp(_a, BONE, type(uint256).max / BONE);
     _b = clamp(_b, BONE, type(uint256).max / BONE);
@@ -285,13 +355,17 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // 1 should be identity for bdiv
-  function bdiv_identity(uint256 _a) public pure {
+  function bdiv_identity(
+    uint256 _a
+  ) public pure {
     uint256 _result = bdiv(_a, BONE);
     assert(_result == _a);
   }
 
   // bdiv should revert if b is 0
-  function bdiv_revert(uint256 _a) public {
+  function bdiv_revert(
+    uint256 _a
+  ) public {
     // action
     (bool succ,) = address(this).call(abi.encodeCall(FuzzBNum.bdiv_exposed, (_a, 0)));
 
@@ -300,7 +374,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bdiv result should be lte a
-  function bdiv_resultLTE(uint256 _a, uint256 _b) public pure {
+  function bdiv_resultLTE(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // vm.assume(_b != 0);
     // vm.assume(_a < type(uint256).max / BONE); // Avoid mul overflow
     //todo: overconstrained next line? Too tightly coupled?
@@ -311,7 +388,10 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bdiv should be bmul reverse operation
-  function bdiv_bmul(uint256 _a, uint256 _b) public {
+  function bdiv_bmul(
+    uint256 _a,
+    uint256 _b
+  ) public {
     _a = clamp(_a, BONE + 1, 10e12 * BONE);
     _b = clamp(_b, BONE, _a - 1);
 
@@ -329,7 +409,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // bpowi should return 1 if exp is 0
-  function bpowi_zeroExp(uint256 _a) public pure {
+  function bpowi_zeroExp(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bpowi(_a, 0);
 
@@ -338,7 +420,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // 0 should be absorbing if base
-  function bpowi_absorbingBase(uint256 _exp) public {
+  function bpowi_absorbingBase(
+    uint256 _exp
+  ) public {
     _exp = clamp(_exp, 1, type(uint256).max);
 
     uint256 _result = bpowi(0, _exp);
@@ -346,13 +430,17 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // 1 should be identity if base
-  function bpowi_identityBase(uint256 _exp) public pure {
+  function bpowi_identityBase(
+    uint256 _exp
+  ) public pure {
     uint256 _result = bpowi(BONE, _exp);
     assert(_result == BONE);
   }
 
   // 1 should be identity if exp
-  function bpowi_identityExp(uint256 _base) public {
+  function bpowi_identityExp(
+    uint256 _base
+  ) public {
     _base = clamp(_base, 1, 10_000);
 
     uint256 _result = bpowi(_base, 1);
@@ -361,7 +449,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bpowi should be distributive over mult of the same base x^a  x^b == x^(a+b)
-  function bpowi_distributiveBase(uint256 _base, uint256 _a, uint256 _b) public {
+  function bpowi_distributiveBase(
+    uint256 _base,
+    uint256 _a,
+    uint256 _b
+  ) public {
     _base = clamp(_base, 1, 10_000);
     _a = clamp(_a, 1, 1000 * BONE);
     _b = clamp(_b, 1, 1000 * BONE);
@@ -373,7 +465,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bpowi should be distributive over mult of the same exp  a^x  b^x == (ab)^x
-  function bpowi_distributiveExp(uint256 _a, uint256 _b, uint256 _exp) public {
+  function bpowi_distributiveExp(
+    uint256 _a,
+    uint256 _b,
+    uint256 _exp
+  ) public {
     _a = clamp(_a, 1, 10_000);
     _b = clamp(_b, 1, 10_000);
     _exp = clamp(_exp, 1, 1000 * BONE);
@@ -388,7 +484,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // power of a power should mult the exp (x^a)^b == x^(ab)
-  function bpowi_powerOfPower(uint256 _base, uint256 _a, uint256 _b) public {
+  function bpowi_powerOfPower(
+    uint256 _base,
+    uint256 _a,
+    uint256 _b
+  ) public {
     _base = clamp(_base, 1, 10_000);
     _a = clamp(_a, BONE, 1000 * BONE);
     _b = clamp(_b, BONE, 1000 * BONE);
@@ -404,7 +504,9 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   /////////////////////////////////////////////////////////////////////
 
   // bpow should return 1 if exp is 0
-  function bpow_zeroExp(uint256 _a) public pure {
+  function bpow_zeroExp(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bpow(_a, 0);
 
@@ -413,19 +515,25 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // 0 should be absorbing if base
-  function bpow_absorbingBase(uint256 _exp) public pure {
+  function bpow_absorbingBase(
+    uint256 _exp
+  ) public pure {
     uint256 _result = bpow(0, _exp);
     assert(_result == 0);
   }
 
   // 1 should be identity if base
-  function bpow_identityBase(uint256 _exp) public pure {
+  function bpow_identityBase(
+    uint256 _exp
+  ) public pure {
     uint256 _result = bpow(BONE, _exp);
     assert(_result == BONE);
   }
 
   // 1 should be identity if exp
-  function bpow_identityExp(uint256 _base) public pure {
+  function bpow_identityExp(
+    uint256 _base
+  ) public pure {
     // action
     uint256 _result = bpow(_base, BONE);
 
@@ -434,7 +542,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bpow should be distributive over mult of the same base x^a * x^b == x^(a+b)
-  function bpow_distributiveBase(uint256 _base, uint256 _a, uint256 _b) public {
+  function bpow_distributiveBase(
+    uint256 _base,
+    uint256 _a,
+    uint256 _b
+  ) public {
     _base = clamp(_base, MIN_BPOW_BASE, MAX_BPOW_BASE);
     _a = clamp(_a, 1, 1000);
     _b = clamp(_b, 1, 1000);
@@ -446,7 +558,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // bpow should be distributive over mult of the same exp  a^x * b^x == (a*b)^x
-  function bpow_distributiveExp(uint256 _a, uint256 _b, uint256 _exp) public {
+  function bpow_distributiveExp(
+    uint256 _a,
+    uint256 _b,
+    uint256 _exp
+  ) public {
     _exp = clamp(_exp, 1, 100);
     _a = clamp(_a, MIN_BPOW_BASE, MAX_BPOW_BASE);
     _b = clamp(_b, MIN_BPOW_BASE, MAX_BPOW_BASE);
@@ -460,7 +576,11 @@ contract FuzzBNum is BNum, EchidnaTest, Test {
   }
 
   // power of a power should mult the exp (x^a)^b == x^(a*b)
-  function bpow_powerOfPower(uint256 _base, uint256 _a, uint256 _b) public {
+  function bpow_powerOfPower(
+    uint256 _base,
+    uint256 _a,
+    uint256 _b
+  ) public {
     _base = clamp(_base, MIN_BPOW_BASE, MAX_BPOW_BASE);
     _a = clamp(_a, 1, 1000);
     _b = clamp(_b, 1, 1000);

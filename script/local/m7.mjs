@@ -3,6 +3,7 @@ import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ethers } from 'ethers';
+import { signCuratedOrder } from './curated-order.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const statePath = resolve(root, '.local/m7.json');
@@ -16,7 +17,6 @@ const accounts = [0, 1, 2].map((index) =>
   ethers.Wallet.fromMnemonic(mnemonic, `m/44'/60'/0'/0/${index}`).connect(provider),
 );
 const [manager, solver, trader] = accounts;
-const appData = ethers.utils.id('Local seven-asset CoW AMM');
 const orderTuple = 'tuple(address sellToken,address buyToken,address receiver,uint256 sellAmount,uint256 buyAmount,uint32 validTo,bytes32 appData,uint256 feeAmount,bytes32 kind,bool partiallyFillable,bytes32 sellTokenBalance,bytes32 buyTokenBalance)';
 const orderTypes = {
   Order: [
@@ -83,9 +83,10 @@ async function deployM7() {
   // ERC20 orders use the vault relayer's direct transfer path. This demo
   // deliberately does not configure a Balancer Vault or internal balances.
   const settlement = await deploy('GPv2Settlement', [authentication.address, ethers.constants.AddressZero]);
-  const factory = await deploy('BCoWFactory', [settlement.address, appData, manager.address]);
+  const trampoline = await deploy('HooksTrampoline', [settlement.address]);
+  const factory = await deploy('BCoWFactory', [settlement.address, trampoline.address, manager.address]);
   const helper = await deploy('BCoWHelper', [factory.address]);
-  const created = await (await factory.newBPool('Magnificent Seven', 'M7')).wait();
+  const created = await (await factory['newBPool(string,string)']('Magnificent Seven', 'M7')).wait();
   const poolAddress = created.events.find((event) => event.event === 'LOG_NEW_POOL').args.bPool;
   const pool = await contract('BCoWPool', poolAddress);
   const symbols = ['NVDA', 'MSFT', 'AAPL', 'AMZN', 'GOOGL', 'META', 'TSLA'];
@@ -108,7 +109,7 @@ async function deployM7() {
   assert.ok((await pool.getSwapFee()).eq(protectiveFee), 'Protective fee missing after finalization');
   const state = {
     protectiveFee: protectiveFee.toString(),
-    chainId, authentication: authentication.address, settlement: settlement.address,
+    chainId, authentication: authentication.address, settlement: settlement.address, trampoline: trampoline.address,
     vaultRelayer: await settlement.vaultRelayer(), factory: factory.address, helper: helper.address,
     pool: pool.address, manager: manager.address, solver: solver.address, trader: trader.address,
     tokens, initialShareSupply: (await pool.totalSupply()).toString(),
@@ -144,7 +145,8 @@ async function settleM7(state, prices, result, quiet = false) {
     const helper = await contract('BCoWHelper', state.helper);
     result = await helper.order(state.pool, prices.map(String));
   }
-  const order = asOrder(result[0]);
+  const signed = await signCuratedOrder(asOrder(result[0]), pool, manager, chainId, state.settlement);
+  const order = signed.order;
   await pool.verify(order);
   const indexOf = (address) => state.tokens.findIndex((token) => token.address.toLowerCase() === address.toLowerCase());
   const sellIndex = indexOf(order.sellToken);
@@ -170,20 +172,21 @@ async function settleM7(state, prices, result, quiet = false) {
   const clearingPrices = prices.map(String);
   clearingPrices[sellIndex] = received.toString();
   clearingPrices[buyIndex] = sold.toString();
-  const poolSignature = ethers.utils.hexConcat([
-    state.pool, ethers.utils.defaultAbiCoder.encode([orderTuple], [order]),
-  ]);
+  const poolSignature = signed.signature;
   const trades = [
     trade(order, sellIndex, buyIndex, poolSignature, 0x40),
     trade(counterOrder, buyIndex, sellIndex, signature, 0),
   ];
-  const preInteractions = result[1].map(({ target, value, callData }) => ({ target, value, callData }));
+  const escrow = await contract('BCoWFeeEscrow', await pool.feeEscrow());
+  const feeBefore = await escrow.claimable(manager.address, order.buyToken);
+  const preInteractions = [signed.pre];
   const receipt = await (await settlement.settle(state.tokens.map((token) => token.address), clearingPrices, trades,
-    [preInteractions, [], []])).wait();
+    [preInteractions, [], [signed.post]])).wait();
   state.lastSettlement = {
     transactionHash: receipt.transactionHash, sellIndex, buyIndex,
     sold: sold.toString(), received: received.toString(), minimum: minimum.toString(),
     beforeBalances, beforeTraderBalances,
+    curatorFee: (await escrow.claimable(manager.address, order.buyToken)).sub(feeBefore).toString(),
   };
   await save(state);
   console.log(`Settled ${state.tokens[sellIndex].symbol} -> ${state.tokens[buyIndex].symbol}: ${receipt.transactionHash}`);
@@ -209,7 +212,7 @@ async function verifyM7(state, quiet = false) {
     let expected = BigInt(last.beforeBalances[index]);
     let expectedTrader = BigInt(last.beforeTraderBalances[index]);
     if (index === last.sellIndex) { expected -= BigInt(last.sold); expectedTrader += BigInt(last.sold); }
-    if (index === last.buyIndex) { expected += BigInt(last.received); expectedTrader -= BigInt(last.received); }
+    if (index === last.buyIndex) { expected += BigInt(last.received) - BigInt(last.curatorFee ?? 0); expectedTrader -= BigInt(last.received); }
     assert.equal(BigInt(after[index]), expected, `${state.tokens[index].symbol} pool balance`);
     assert.equal(BigInt(traderAfter[index]), expectedTrader, `${state.tokens[index].symbol} trader balance`);
   }
@@ -225,7 +228,7 @@ async function verifyM7(state, quiet = false) {
     after: ethers.utils.formatUnits(after[index], token.decimals),
   })));
   console.log('Verified: matched balances, five untouched reserves, unchanged LP shares, and increased weighted invariant.');
-  console.log(`LP surplus: ${ethers.utils.formatUnits(BigInt(last.received) - BigInt(last.minimum), state.tokens[last.buyIndex].decimals)} ${state.tokens[last.buyIndex].symbol}`);
+  console.log(`LP surplus: ${ethers.utils.formatUnits(BigInt(last.received) - BigInt(last.minimum) - BigInt(last.curatorFee ?? 0), state.tokens[last.buyIndex].decimals)} ${state.tokens[last.buyIndex].symbol}`);
 }
 
 // Exercise proportional liquidity in separate transactions, before and after
@@ -366,6 +369,6 @@ async function main() {
 }
 
 export { root, provider, accounts, manager, solver, trader, chainId, artifact, contract, deploy,
-  deployM7, load, asOrder, trade, orderTuple, pairInvariant, allocationDrift, isNoOrder };
+  deployM7, settleM7, load, asOrder, trade, orderTuple, pairInvariant, allocationDrift, isNoOrder };
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();

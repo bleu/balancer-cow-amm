@@ -7,12 +7,18 @@ import {BCoWPool} from 'contracts/BCoWPool.sol';
 import {IBCoWFactory} from 'interfaces/IBCoWFactory.sol';
 
 contract BCoWPoolForTest is BCoWPool {
-  constructor(address cowSolutionSettler, bytes32 appData) BCoWPool(cowSolutionSettler, appData, 'name', 'symbol') {}
+  constructor(
+    address cowSolutionSettler,
+    address hooksTrampoline_,
+    address creator_
+  ) BCoWPool(cowSolutionSettler, hooksTrampoline_, Settings(creator_, creator_, 180, 100), 'name', 'symbol') {}
 
   bytes32 private _reenteringMutex;
 
   /// @dev workaround for hevm not supporting tload/tstore
-  function _setLock(bytes32 value) internal override {
+  function _setLock(
+    bytes32 value
+  ) internal override {
     _reenteringMutex = value;
   }
 
@@ -22,12 +28,20 @@ contract BCoWPoolForTest is BCoWPool {
   }
 
   /// @dev workaround for hevm not supporting mcopy
-  function _pullUnderlying(address token, address from, uint256 amount) internal override {
+  function _pullUnderlying(
+    address token,
+    address from,
+    uint256 amount
+  ) internal override {
     IERC20(token).transferFrom(from, address(this), amount);
   }
 
   /// @dev workaround for hevm not supporting mcopy
-  function _pushUnderlying(address token, address to, uint256 amount) internal override {
+  function _pushUnderlying(
+    address token,
+    address to,
+    uint256 amount
+  ) internal override {
     IERC20(token).transfer(to, amount);
   }
 

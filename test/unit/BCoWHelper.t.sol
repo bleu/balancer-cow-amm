@@ -36,6 +36,16 @@ contract BCoWHelperTest is Test, BMath {
   string constant ERC20_SYMBOL = 'BPT';
   bytes32 constant DOMAIN_SEPARATOR = bytes32('domainSeparator');
 
+  function _h0(
+    GPv2Order.Data memory o,
+    bytes32 domain
+  ) internal pure returns (bytes32 h) {
+    bytes32 saved = o.appData;
+    o.appData = bytes32(0);
+    h = GPv2Order.hash(o, domain);
+    o.appData = saved;
+  }
+
   struct Reserves {
     address addr;
     uint256 weight;
@@ -43,7 +53,7 @@ contract BCoWHelperTest is Test, BMath {
   }
 
   function setUp() external {
-    factory = new MockBCoWFactory(address(0), bytes32(0), address(0));
+    factory = new MockBCoWFactory(address(0), address(uint160(uint256(bytes32(0)))), address(0));
 
     address solutionSettler = makeAddr('solutionSettler');
     vm.mockCall(solutionSettler, abi.encodePacked(ISettlement.domainSeparator.selector), abi.encode(DOMAIN_SEPARATOR));
@@ -61,7 +71,6 @@ contract BCoWHelperTest is Test, BMath {
     vm.mockCall(tokens[0], abi.encodePacked(IERC20.balanceOf.selector), abi.encode(priceVector[0]));
     vm.mockCall(tokens[1], abi.encodePacked(IERC20.balanceOf.selector), abi.encode(priceVector[1]));
 
-    factory.mock_call_APP_DATA(bytes32('appData'));
     helper = new MockBCoWHelper(address(factory));
 
     pool = setUpMockPoolFromDefaults(VALID_WEIGHT, VALID_WEIGHT);
@@ -72,7 +81,7 @@ contract BCoWHelperTest is Test, BMath {
     uint256 weight1
   ) private returns (MockBCoWPool pool_) {
     uint256 totalWeight = weight0 + weight1;
-    pool_ = new MockBCoWPool(makeAddr('solutionSettler'), bytes32(0), ERC20_NAME, ERC20_SYMBOL);
+    pool_ = new MockBCoWPool(makeAddr('solutionSettler'), ERC20_NAME, ERC20_SYMBOL);
     pool_.set__tokens(tokens);
     pool_.set__records(tokens[0], IBPool.Record({bound: true, index: 0, denorm: weight0}));
     pool_.set__records(tokens[1], IBPool.Record({bound: true, index: 1, denorm: weight1}));
@@ -92,7 +101,7 @@ contract BCoWHelperTest is Test, BMath {
     uint256[] memory weights,
     uint256[] memory balances
   ) private returns (MockBCoWPool pool_) {
-    pool_ = new MockBCoWPool(makeAddr('solutionSettler'), bytes32(0), ERC20_NAME, ERC20_SYMBOL);
+    pool_ = new MockBCoWPool(makeAddr('solutionSettler'), ERC20_NAME, ERC20_SYMBOL);
     pool_.set__tokens(poolTokens);
 
     uint256 totalWeight;
@@ -108,16 +117,10 @@ contract BCoWHelperTest is Test, BMath {
     factory.mock_call_isBPool(address(pool_), true);
   }
 
-  function test_ConstructorWhenCalled(
-    bytes32 _appData
-  ) external {
-    factory.expectCall_APP_DATA();
-    factory.mock_call_APP_DATA(_appData);
+  function test_ConstructorWhenCalled() external {
     helper = new MockBCoWHelper(address(factory));
     // it should set factory
     assertEq(helper.factory(), address(factory));
-    // it should set app data from factory
-    assertEq(helper.call__APP_DATA(), _appData);
   }
 
   function test_TokensRevertWhen_PoolIsNotRegisteredInFactory() external {
@@ -513,13 +516,13 @@ contract BCoWHelperTest is Test, BMath {
 
   function assertValidStaticOrderParams(
     GPv2Order.Data memory order_,
-    MockBCoWFactory factory_
+    MockBCoWFactory
   ) internal {
     // it should return a valid pool order
     assertEq(order_.receiver, GPv2Order.RECEIVER_SAME_AS_OWNER);
     assertLe(order_.validTo, block.timestamp + 5 minutes);
     assertEq(order_.feeAmount, 0);
-    assertEq(order_.appData, factory_.APP_DATA());
+    assertEq(order_.appData, pool.appDataHash(_h0(order_, pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR()), order_.buyAmount));
     assertEq(order_.kind, GPv2Order.KIND_SELL);
     assertEq(order_.buyTokenBalance, GPv2Order.BALANCE_ERC20);
     assertEq(order_.sellTokenBalance, GPv2Order.BALANCE_ERC20);
@@ -536,11 +539,11 @@ contract BCoWHelperTest is Test, BMath {
     assertEq(preInteractions.length, 1);
     assertEq(preInteractions[0].target, address(pool_));
     assertEq(preInteractions[0].value, 0);
-    bytes memory commitment = abi.encodeCall(IBCoWPool.commit, GPv2Order.hash(order_, domainSeparator));
+    bytes memory commitment = abi.encodeCall(IBCoWPool.commit, (_h0(order_, domainSeparator), order_.buyAmount));
     assertEq(keccak256(preInteractions[0].callData), keccak256(commitment));
 
     // it should return an empty post-interaction
-    assertTrue(postInteractions.length == 0);
+    assertEq(postInteractions.length, 1);
   }
 
   function assertValidSignature(
@@ -549,7 +552,7 @@ contract BCoWHelperTest is Test, BMath {
     MockBCoWPool pool_
   ) internal {
     // it should return a valid signature
-    bytes memory validSig = abi.encodePacked(pool_, abi.encode(order_));
+    bytes memory validSig = abi.encodePacked(pool_, abi.encode(order_, uint256(0), bytes('')));
     assertEq(keccak256(validSig), keccak256(sig));
   }
 }

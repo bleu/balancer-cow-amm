@@ -2,8 +2,9 @@
 pragma solidity 0.8.25;
 
 import {EchidnaTest} from '../helpers/AdvancedTestsUtils.sol';
-import {CryticERC20ExternalBasicProperties} from
-  '@crytic/properties/contracts/ERC20/external/properties/ERC20ExternalBasicProperties.sol';
+import {
+  CryticERC20ExternalBasicProperties
+} from '@crytic/properties/contracts/ERC20/external/properties/ERC20ExternalBasicProperties.sol';
 import {ITokenMock} from '@crytic/properties/contracts/ERC20/external/util/ITokenMock.sol';
 import {PropertiesConstants} from '@crytic/properties/contracts/util/PropertiesConstants.sol';
 import {BToken} from 'contracts/BToken.sol';
@@ -16,7 +17,9 @@ contract FuzzBToken is CryticERC20ExternalBasicProperties, EchidnaTest {
 
   /// @custom:property-id 8
   /// @custom:property  BToken increaseApproval should increase the approval of the address by the amount
-  function fuzz_increaseApproval(uint256 _approvalToAdd) public {
+  function fuzz_increaseApproval(
+    uint256 _approvalToAdd
+  ) public {
     // Precondition
     uint256 _approvalBefore = token.allowance(USER1, USER2);
 
@@ -31,7 +34,9 @@ contract FuzzBToken is CryticERC20ExternalBasicProperties, EchidnaTest {
   /// @custom:property-id 9
   /// @custom:property BToken decreaseApproval should decrease the approval to max(old-amount, 0)
 
-  function fuzz_decreaseApproval(uint256 _approvalToLower) public {
+  function fuzz_decreaseApproval(
+    uint256 _approvalToLower
+  ) public {
     // Precondition
     uint256 _approvalBefore = token.allowance(USER1, USER2);
 

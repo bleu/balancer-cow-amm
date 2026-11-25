@@ -11,6 +11,7 @@ import {GPv2Signing} from '@cowprotocol/mixins/GPv2Signing.sol';
 
 import {BCoWConst} from 'contracts/BCoWConst.sol';
 import {BCoWFactory} from 'contracts/BCoWFactory.sol';
+import {BCoWPool} from 'contracts/BCoWPool.sol';
 
 import {IBCoWPool} from 'interfaces/IBCoWPool.sol';
 import {IBFactory} from 'interfaces/IBFactory.sol';
@@ -28,11 +29,11 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
   bytes32 public constant APP_DATA = bytes32('exampleIntegrationAppData');
 
   function _deployFactory() internal override returns (IBFactory) {
-    return new BCoWFactory(address(settlement), APP_DATA, bdaoMsig);
+    return new BCoWFactory(address(settlement), address(0x1234), bdaoMsig);
   }
 
   function _makeSwap() internal override {
-    uint32 latestValidTimestamp = uint32(block.timestamp) + MAX_ORDER_DURATION - 1;
+    uint32 latestValidTimestamp = uint32(block.timestamp) + 180 - 1;
 
     // swapper approves dai to vaultRelayer
     vm.startPrank(swapper.addr);
@@ -70,11 +71,11 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
       appData: APP_DATA,
       feeAmount: 0,
       kind: GPv2Order.KIND_SELL,
-      partiallyFillable: true,
+      partiallyFillable: false,
       sellTokenBalance: GPv2Order.BALANCE_ERC20,
       buyTokenBalance: GPv2Order.BALANCE_ERC20
     });
-    bytes memory poolSig = abi.encode(poolOrder);
+    (bytes32 h0, bytes memory poolSig) = _signPoolOrder(poolOrder);
 
     // solver prepares for call settle()
     IERC20[] memory tokens = new IERC20[](2);
@@ -125,9 +126,7 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
     interactions[0][0] = GPv2Interaction.Data({
       target: address(pool),
       value: 0,
-      callData: abi.encodeWithSelector(
-        IBCoWPool.commit.selector, poolOrder.hash(IBCoWPool(address(pool)).SOLUTION_SETTLER_DOMAIN_SEPARATOR())
-      )
+      callData: abi.encodeWithSelector(IBCoWPool.commit.selector, h0, poolOrder.buyAmount)
     });
 
     // finally, settle
@@ -138,7 +137,7 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
   }
 
   function _makeSwapInverse() internal override {
-    uint32 latestValidTimestamp = uint32(block.timestamp) + MAX_ORDER_DURATION - 1;
+    uint32 latestValidTimestamp = uint32(block.timestamp) + 180 - 1;
 
     // swapper approves weth to vaultRelayer
     vm.startPrank(swapperInverse.addr);
@@ -176,11 +175,11 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
       appData: APP_DATA,
       feeAmount: 0,
       kind: GPv2Order.KIND_SELL,
-      partiallyFillable: true,
+      partiallyFillable: false,
       sellTokenBalance: GPv2Order.BALANCE_ERC20,
       buyTokenBalance: GPv2Order.BALANCE_ERC20
     });
-    bytes memory poolSig = abi.encode(poolOrder);
+    (bytes32 h0, bytes memory poolSig) = _signPoolOrder(poolOrder);
 
     // solver prepares for call settle()
     IERC20[] memory tokens = new IERC20[](2);
@@ -231,9 +230,7 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
     interactions[0][0] = GPv2Interaction.Data({
       target: address(pool),
       value: 0,
-      callData: abi.encodeWithSelector(
-        IBCoWPool.commit.selector, poolOrder.hash(IBCoWPool(address(pool)).SOLUTION_SETTLER_DOMAIN_SEPARATOR())
-      )
+      callData: abi.encodeWithSelector(IBCoWPool.commit.selector, h0, poolOrder.buyAmount)
     });
 
     // finally, settle
@@ -241,6 +238,21 @@ contract BCowPoolIntegrationTest is BPoolIntegrationTest, BCoWConst {
     snapStart('settlementCoWSwapInverse');
     settlement.settle(tokens, clearingPrices, trades, interactions);
     snapEnd();
+  }
+
+  function _signPoolOrder(
+    GPv2Order.Data memory order
+  ) internal returns (bytes32 h0, bytes memory sig) {
+    vm.stopPrank();
+    address signer = vm.addr(0xc01234);
+    vm.prank(lp);
+    BCoWPool(address(pool)).setCurator(signer);
+    order.appData = bytes32(0);
+    h0 = order.hash(settlement.domainSeparator());
+    order.appData = BCoWPool(address(pool)).appDataHash(h0, order.buyAmount);
+    (uint8 v, bytes32 r, bytes32 s) =
+      vm.sign(0xc01234, BCoWPool(address(pool)).curatorDigest(order.hash(settlement.domainSeparator()), 0));
+    return (h0, abi.encode(order, uint256(0), abi.encodePacked(r, s, v)));
   }
 
   // NOTE: not implemented in Balancer CoW flow
