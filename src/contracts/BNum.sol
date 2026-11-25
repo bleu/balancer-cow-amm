@@ -46,19 +46,26 @@ contract BNum is BConst {
    */
   error BNum_BPowBaseTooHigh();
 
-  function btoi(uint256 a) internal pure returns (uint256) {
+  function btoi(
+    uint256 a
+  ) internal pure returns (uint256) {
     unchecked {
       return a / BONE;
     }
   }
 
-  function bfloor(uint256 a) internal pure returns (uint256) {
+  function bfloor(
+    uint256 a
+  ) internal pure returns (uint256) {
     unchecked {
       return btoi(a) * BONE;
     }
   }
 
-  function badd(uint256 a, uint256 b) internal pure returns (uint256) {
+  function badd(
+    uint256 a,
+    uint256 b
+  ) internal pure returns (uint256) {
     unchecked {
       uint256 c = a + b;
       if (c < a) {
@@ -68,7 +75,10 @@ contract BNum is BConst {
     }
   }
 
-  function bsub(uint256 a, uint256 b) internal pure returns (uint256) {
+  function bsub(
+    uint256 a,
+    uint256 b
+  ) internal pure returns (uint256) {
     unchecked {
       (uint256 c, bool flag) = bsubSign(a, b);
       if (flag) {
@@ -78,7 +88,10 @@ contract BNum is BConst {
     }
   }
 
-  function bsubSign(uint256 a, uint256 b) internal pure returns (uint256, bool) {
+  function bsubSign(
+    uint256 a,
+    uint256 b
+  ) internal pure returns (uint256, bool) {
     unchecked {
       if (a >= b) {
         return (a - b, false);
@@ -88,7 +101,10 @@ contract BNum is BConst {
     }
   }
 
-  function bmul(uint256 a, uint256 b) internal pure returns (uint256) {
+  function bmul(
+    uint256 a,
+    uint256 b
+  ) internal pure returns (uint256) {
     unchecked {
       uint256 c0 = a * b;
       if (a != 0 && c0 / a != b) {
@@ -104,7 +120,10 @@ contract BNum is BConst {
     }
   }
 
-  function bdiv(uint256 a, uint256 b) internal pure returns (uint256) {
+  function bdiv(
+    uint256 a,
+    uint256 b
+  ) internal pure returns (uint256) {
     unchecked {
       if (b == 0) {
         revert BNum_DivZero();
@@ -124,7 +143,10 @@ contract BNum is BConst {
   }
 
   // DSMath.wpow
-  function bpowi(uint256 a, uint256 n) internal pure returns (uint256) {
+  function bpowi(
+    uint256 a,
+    uint256 n
+  ) internal pure returns (uint256) {
     unchecked {
       uint256 z = n % 2 != 0 ? a : BONE;
 
@@ -142,7 +164,10 @@ contract BNum is BConst {
   // Compute b^(e.w) by splitting it into (b^e)*(b^0.w).
   // Use `bpowi` for `b^e` and `bpowK` for k iterations
   // of approximation of b^0.w
-  function bpow(uint256 base, uint256 exp) internal pure returns (uint256) {
+  function bpow(
+    uint256 base,
+    uint256 exp
+  ) internal pure returns (uint256) {
     unchecked {
       if (base < MIN_BPOW_BASE) {
         revert BNum_BPowBaseTooLow();
@@ -165,7 +190,11 @@ contract BNum is BConst {
     }
   }
 
-  function bpowApprox(uint256 base, uint256 exp, uint256 precision) internal pure returns (uint256) {
+  function bpowApprox(
+    uint256 base,
+    uint256 exp,
+    uint256 precision
+  ) internal pure returns (uint256) {
     unchecked {
       // term 0:
       uint256 a = exp;

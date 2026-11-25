@@ -25,7 +25,10 @@ contract BToken is Test {
     bToken.approve(spender, initialApproval);
   }
 
-  function test_ConstructorWhenCalled(string memory _name, string memory _symbol) external {
+  function test_ConstructorWhenCalled(
+    string memory _name,
+    string memory _symbol
+  ) external {
     MockBToken _bToken = new MockBToken(_name, _symbol);
     // it sets token name
     assertEq(_bToken.name(), _name);

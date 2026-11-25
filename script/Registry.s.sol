@@ -13,7 +13,9 @@ abstract contract Registry is Params {
   /// @notice Balancer CoW Helper
   BCoWHelper public bCoWHelper;
 
-  constructor(uint256 chainId) Params(chainId) {
+  constructor(
+    uint256 chainId
+  ) Params(chainId) {
     if (chainId == 1) {
       // Ethereum Mainnet
       bCoWFactory = BCoWFactory(0xf76c421bAb7df8548604E60deCCcE50477C10462);

@@ -21,7 +21,10 @@ contract BFactory is IBFactory {
   }
 
   /// @inheritdoc IBFactory
-  function newBPool(string memory name, string memory symbol) external returns (IBPool bPool) {
+  function newBPool(
+    string memory name,
+    string memory symbol
+  ) external returns (IBPool bPool) {
     bPool = _newBPool(name, symbol);
     _isBPool[address(bPool)] = true;
     emit LOG_NEW_POOL(msg.sender, address(bPool));
@@ -29,7 +32,9 @@ contract BFactory is IBFactory {
   }
 
   /// @inheritdoc IBFactory
-  function setBDao(address bDao) external {
+  function setBDao(
+    address bDao
+  ) external {
     if (bDao == address(0)) {
       revert BFactory_AddressZero();
     }
@@ -42,7 +47,9 @@ contract BFactory is IBFactory {
   }
 
   /// @inheritdoc IBFactory
-  function collect(IBPool bPool) external virtual {
+  function collect(
+    IBPool bPool
+  ) external virtual {
     if (msg.sender != _bDao) {
       revert BFactory_NotBDao();
     }
@@ -51,7 +58,9 @@ contract BFactory is IBFactory {
   }
 
   /// @inheritdoc IBFactory
-  function isBPool(address bPool) external view returns (bool) {
+  function isBPool(
+    address bPool
+  ) external view returns (bool) {
     return _isBPool[bPool];
   }
 
@@ -67,7 +76,10 @@ contract BFactory is IBFactory {
    * @dev Internal function to allow overriding in derived contracts.
    * @return bPool The deployed BPool
    */
-  function _newBPool(string memory name, string memory symbol) internal virtual returns (IBPool bPool) {
+  function _newBPool(
+    string memory name,
+    string memory symbol
+  ) internal virtual returns (IBPool bPool) {
     bPool = new BPool(name, symbol);
   }
 }

@@ -26,7 +26,9 @@ contract BPoolBind is BPoolBase {
     bPool.bind(token, tokenBindBalance, tokenWeight);
   }
 
-  function test_RevertWhen_CallerIsNOTController(address _caller) external {
+  function test_RevertWhen_CallerIsNOTController(
+    address _caller
+  ) external {
     // it should revert
     vm.assume(_caller != address(this));
     vm.prank(_caller);
@@ -80,7 +82,9 @@ contract BPoolBind is BPoolBase {
     bPool.bind(token, tokenBindBalance, MAX_TOTAL_WEIGHT / 2);
   }
 
-  function test_WhenTokenCanBeBound(uint256 _existingTokens) external {
+  function test_WhenTokenCanBeBound(
+    uint256 _existingTokens
+  ) external {
     _existingTokens = bound(_existingTokens, 0, MAX_BOUND_TOKENS - 1);
     bPool.set__tokens(_getDeterministicTokenArray(_existingTokens));
 

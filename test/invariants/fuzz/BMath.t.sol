@@ -50,8 +50,9 @@ contract FuzzBMath is EchidnaTest {
     uint256 calc_tokenAmountOut =
       bMath.calcOutGivenIn(tokenBalanceIn, tokenWeightIn, tokenBalanceOut, tokenWeightOut, tokenAmountIn, swapFee);
 
-    uint256 calc_tokenAmountIn =
-      bMath.calcInGivenOut(tokenBalanceIn, tokenWeightIn, tokenBalanceOut, tokenWeightOut, calc_tokenAmountOut, swapFee);
+    uint256 calc_tokenAmountIn = bMath.calcInGivenOut(
+      tokenBalanceIn, tokenWeightIn, tokenBalanceOut, tokenWeightOut, calc_tokenAmountOut, swapFee
+    );
 
     assert(
       tokenAmountIn >= calc_tokenAmountIn

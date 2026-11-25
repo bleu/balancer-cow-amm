@@ -10,7 +10,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // btoi should always return the floor(a / BONE) == (a - a%BONE) / BONE
-  function check_btoi_alwaysFloor(uint256 _input) public pure {
+  function check_btoi_alwaysFloor(
+    uint256 _input
+  ) public pure {
     // action
     uint256 _result = btoi(_input);
 
@@ -23,7 +25,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // btoi should always return the floor(a / BONE) == (a - a%BONE) / BONE
-  function check_bfloor_shouldAlwaysRoundDown(uint256 _input) public pure {
+  function check_bfloor_shouldAlwaysRoundDown(
+    uint256 _input
+  ) public pure {
     // action
     uint256 _result = bfloor(_input);
 
@@ -36,7 +40,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // badd should be commutative
-  function check_baddCommut(uint256 _a, uint256 _b) public pure {
+  function check_baddCommut(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result1 = badd(_a, _b);
     uint256 _result2 = badd(_b, _a);
@@ -46,7 +53,11 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // badd should be associative
-  function check_badd_assoc(uint256 _a, uint256 _b, uint256 _c) public pure {
+  function check_badd_assoc(
+    uint256 _a,
+    uint256 _b,
+    uint256 _c
+  ) public pure {
     // action
     uint256 _result1 = badd(badd(_a, _b), _c);
     uint256 _result2 = badd(_a, badd(_b, _c));
@@ -56,7 +67,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // 0 should be identity for badd
-  function check_badd_zeroIdentity(uint256 _a) public pure {
+  function check_badd_zeroIdentity(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = badd(_a, 0);
 
@@ -65,7 +78,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // badd result should always be gte its terms
-  function check_badd_resultGTE(uint256 _a, uint256 _b) public pure {
+  function check_badd_resultGTE(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result = badd(_a, _b);
 
@@ -75,7 +91,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // badd should never sum terms which have a sum gt uint max
-  function check_badd_overflow(uint256 _a, uint256 _b) public pure {
+  function check_badd_overflow(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     vm.assume(_a != type(uint256).max);
 
@@ -87,7 +106,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // badd should have bsub as reverse operation
-  function check_badd_bsub(uint256 _a, uint256 _b) public pure {
+  function check_badd_bsub(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result = badd(_a, _b);
     uint256 _result2 = bsub(_result, _b);
@@ -101,7 +123,11 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // bsub should not be associative
-  function check_bsub_notAssoc(uint256 _a, uint256 _b, uint256 _c) public pure {
+  function check_bsub_notAssoc(
+    uint256 _a,
+    uint256 _b,
+    uint256 _c
+  ) public pure {
     // precondition
     vm.assume(_a != _b && _b != _c && _a != _c);
     vm.assume(_a != 0 && _b != 0 && _c != 0);
@@ -115,7 +141,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // bsub should have 0 as identity
-  function check_bsub_zeroIdentity(uint256 _a) public pure {
+  function check_bsub_zeroIdentity(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bsub(_a, 0);
 
@@ -124,7 +152,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // bsub result should always be lte a
-  function check_bsub_resultLTE(uint256 _a, uint256 _b) public pure {
+  function check_bsub_resultLTE(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     vm.assume(_a >= _b); // Avoid underflow
 
@@ -140,7 +171,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // bsubSign should be commutative value-wise
-  function check_bsubSign_CommutValue(uint256 _a, uint256 _b) public pure {
+  function check_bsubSign_CommutValue(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     vm.assume(_a != _b);
 
@@ -153,7 +187,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // bsubSign should not be commutative sign-wise
-  function check_bsubSign_notCommutSign(uint256 _a, uint256 _b) public pure {
+  function check_bsubSign_notCommutSign(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     vm.assume(_a != _b);
 
@@ -166,7 +203,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // bsubSign result should always be negative if b > a
-  function check_bsubSign_negative(uint256 _a, uint256 _b) public pure {
+  function check_bsubSign_negative(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     vm.assume(_b > _a);
 
@@ -179,7 +219,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // bsubSign result should always be positive if a > b
-  function check_bsubSign_positive(uint256 _a, uint256 _b) public pure {
+  function check_bsubSign_positive(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // precondition
     vm.assume(_a > _b);
 
@@ -192,7 +235,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // bsubSign result should always be 0 if a == b
-  function check_bsubSign_zero(uint256 _a) public pure {
+  function check_bsubSign_zero(
+    uint256 _a
+  ) public pure {
     // action
     (uint256 _result, bool _flag) = bsubSign(_a, _a);
 
@@ -206,7 +251,10 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // bmul should be commutative
-  function check_bmul_commutative(uint256 _a, uint256 _b) public pure {
+  function check_bmul_commutative(
+    uint256 _a,
+    uint256 _b
+  ) public pure {
     // action
     uint256 _result1 = bmul(_a, _b);
     uint256 _result2 = bmul(_b, _a);
@@ -216,7 +264,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // 0 should be absorbing for mul
-  function check_bmul_absorbing(uint256 _a) public pure {
+  function check_bmul_absorbing(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bmul(_a, 0);
 
@@ -229,7 +279,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // bpowi should return 1 if exp is 0
-  function check_bpowi_zeroExp(uint256 _a) public pure {
+  function check_bpowi_zeroExp(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bpowi(_a, 0);
 
@@ -242,7 +294,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   /////////////////////////////////////////////////////////////////////
 
   // bpow should return 1 if exp is 0
-  function check_bpow_zeroExp(uint256 _a) public pure {
+  function check_bpow_zeroExp(
+    uint256 _a
+  ) public pure {
     // action
     uint256 _result = bpow(_a, 0);
 
@@ -251,7 +305,9 @@ contract SymbolicBNum is BNum, HalmosTest {
   }
 
   // 1 should be identity if exp
-  function check_bpow_identityExp(uint256 _base) public pure {
+  function check_bpow_identityExp(
+    uint256 _base
+  ) public pure {
     // action
     uint256 _result = bpow(_base, BONE);
 

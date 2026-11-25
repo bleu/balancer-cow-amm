@@ -27,7 +27,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 1);
   }
 
-  function test_BtoiWhenPassingALessThanBONE(uint256 _a) external {
+  function test_BtoiWhenPassingALessThanBONE(
+    uint256 _a
+  ) external {
     _a = bound(_a, 0, BONE - 1);
 
     uint256 _result = bNum.call_btoi(_a);
@@ -53,7 +55,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BfloorWhenPassingALessThanBONE(uint256 _a) external {
+  function test_BfloorWhenPassingALessThanBONE(
+    uint256 _a
+  ) external {
     _a = bound(_a, 0, BONE - 1);
 
     uint256 _result = bNum.call_bfloor(_a);
@@ -80,7 +84,10 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BaddRevertWhen_PassingAAndBTooBig(uint256 _a, uint256 _b) external {
+  function test_BaddRevertWhen_PassingAAndBTooBig(
+    uint256 _a,
+    uint256 _b
+  ) external {
     _a = bound(_a, 1, type(uint256).max);
     _b = bound(_b, type(uint256).max - _a + 1, type(uint256).max);
 
@@ -109,7 +116,10 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BsubRevertWhen_PassingALessThanB(uint256 _a, uint256 _b) external {
+  function test_BsubRevertWhen_PassingALessThanB(
+    uint256 _a,
+    uint256 _b
+  ) external {
     _a = bound(_a, 0, type(uint256).max - 1);
     _b = bound(_b, _a + 1, type(uint256).max);
 
@@ -138,7 +148,10 @@ contract BNumTest is Test, BConst {
     assertFalse(_flag);
   }
 
-  function test_BsubSignWhenPassingALessThanB(uint256 _a, uint256 _b) external {
+  function test_BsubSignWhenPassingALessThanB(
+    uint256 _a,
+    uint256 _b
+  ) external {
     _a = bound(_a, 0, type(uint256).max - 1);
     _b = bound(_b, _a + 1, type(uint256).max);
 
@@ -164,7 +177,10 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BmulRevertWhen_PassingAAndBTooBig(uint256 _a, uint256 _b) external {
+  function test_BmulRevertWhen_PassingAAndBTooBig(
+    uint256 _a,
+    uint256 _b
+  ) external {
     _a = bound(_a, type(uint256).max / 2, type(uint256).max);
     _b = bound(_b, type(uint256).max / 2, type(uint256).max);
 
@@ -198,7 +214,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 5.9375e18);
   }
 
-  function test_BdivRevertWhen_PassingBAsZero(uint256 _a) external {
+  function test_BdivRevertWhen_PassingBAsZero(
+    uint256 _a
+  ) external {
     _a = bound(_a, 0, type(uint256).max);
 
     // it should revert
@@ -207,7 +225,9 @@ contract BNumTest is Test, BConst {
     bNum.call_bdiv(_a, 0);
   }
 
-  function test_BdivWhenPassingAAsZero(uint256 _b) external {
+  function test_BdivWhenPassingAAsZero(
+    uint256 _b
+  ) external {
     _b = bound(_b, 1, type(uint256).max);
 
     // it should return zero
@@ -216,7 +236,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BdivRevertWhen_PassingATooBig(uint256 _a) external {
+  function test_BdivRevertWhen_PassingATooBig(
+    uint256 _a
+  ) external {
     _a = bound(_a, type(uint256).max / BONE + 1, type(uint256).max);
 
     // it should revert
@@ -226,7 +248,10 @@ contract BNumTest is Test, BConst {
     bNum.call_bdiv(_a, 1);
   }
 
-  function test_BdivRevertWhen_PassingAAndBTooBig(uint256 _a, uint256 _b) external {
+  function test_BdivRevertWhen_PassingAAndBTooBig(
+    uint256 _a,
+    uint256 _b
+  ) external {
     _a = bound(_a, type(uint256).max / (2 * BONE) + 1, type(uint256).max / BONE);
     _b = bound(_b, 2 * (type(uint256).max - (_a * BONE)) + 2, type(uint256).max);
 
@@ -248,7 +273,10 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BdivWhenFlooringToZero(uint256 _a, uint256 _b) external {
+  function test_BdivWhenFlooringToZero(
+    uint256 _a,
+    uint256 _b
+  ) external {
     _a = bound(_a, 1, (type(uint256).max / (BONE * 2)) - 1);
     _b = bound(_b, (2 * BONE * _a) + 1, type(uint256).max);
 
@@ -269,7 +297,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 2.5e18);
   }
 
-  function test_BpowiWhenPassingExponentAsZero(uint256 _base) external {
+  function test_BpowiWhenPassingExponentAsZero(
+    uint256 _base
+  ) external {
     _base = bound(_base, 0, type(uint256).max);
 
     uint256 _result = bNum.call_bpowi(_base, 0);
@@ -278,7 +308,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, BONE);
   }
 
-  function test_BpowiWhenPassingBaseAsZero(uint256 _exponent) external {
+  function test_BpowiWhenPassingBaseAsZero(
+    uint256 _exponent
+  ) external {
     _exponent = bound(_exponent, 1, type(uint256).max);
 
     uint256 _result = bNum.call_bpowi(0, _exponent);
@@ -287,7 +319,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 0);
   }
 
-  function test_BpowiWhenPassingBaseAsBONE(uint256 _exponent) external {
+  function test_BpowiWhenPassingBaseAsBONE(
+    uint256 _exponent
+  ) external {
     _exponent = bound(_exponent, 0, type(uint256).max);
 
     uint256 _result = bNum.call_bpowi(BONE, _exponent);
@@ -307,7 +341,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, 16_777_216e18);
   }
 
-  function test_BpowWhenPassingExponentAsZero(uint256 _base) external {
+  function test_BpowWhenPassingExponentAsZero(
+    uint256 _base
+  ) external {
     _base = bound(_base, MIN_BPOW_BASE, MAX_BPOW_BASE);
     uint256 _result = bNum.call_bpow(_base, 0);
 
@@ -315,7 +351,9 @@ contract BNumTest is Test, BConst {
     assertEq(_result, BONE);
   }
 
-  function test_BpowRevertWhen_PassingBaseLteThanMIN_BPOW_BASE(uint256 _base) external {
+  function test_BpowRevertWhen_PassingBaseLteThanMIN_BPOW_BASE(
+    uint256 _base
+  ) external {
     _base = bound(_base, 0, MIN_BPOW_BASE);
 
     // it should revert
@@ -324,7 +362,9 @@ contract BNumTest is Test, BConst {
     bNum.call_bpow(0, 3e18);
   }
 
-  function test_BpowRevertWhen_PassingBaseGteMAX_BPOW_BASE(uint256 _base) external {
+  function test_BpowRevertWhen_PassingBaseGteMAX_BPOW_BASE(
+    uint256 _base
+  ) external {
     _base = bound(_base, MAX_BPOW_BASE, type(uint256).max);
 
     // it should revert

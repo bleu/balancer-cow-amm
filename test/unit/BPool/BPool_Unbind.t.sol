@@ -24,7 +24,9 @@ contract BPoolUnbind is BPoolBase {
     bPool.unbind(tokens[0]);
   }
 
-  function test_RevertWhen_CallerIsNOTController(address _caller) external {
+  function test_RevertWhen_CallerIsNOTController(
+    address _caller
+  ) external {
     // it should revert
     vm.assume(_caller != address(this));
     vm.prank(_caller);

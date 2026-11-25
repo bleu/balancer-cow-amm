@@ -205,13 +205,17 @@ interface IBPool is IERC20 {
    * @notice Sets the new swap fee
    * @param swapFee The new swap fee
    */
-  function setSwapFee(uint256 swapFee) external;
+  function setSwapFee(
+    uint256 swapFee
+  ) external;
 
   /**
    * @notice Sets the new controller
    * @param manager The new controller
    */
-  function setController(address manager) external;
+  function setController(
+    address manager
+  ) external;
 
   /**
    * @notice Finalize the pool, removing the restrictions on the pool
@@ -224,27 +228,39 @@ interface IBPool is IERC20 {
    * @param balance The balance of the token to bind
    * @param denorm The denormalized weight of the token to bind
    */
-  function bind(address token, uint256 balance, uint256 denorm) external;
+  function bind(
+    address token,
+    uint256 balance,
+    uint256 denorm
+  ) external;
 
   /**
    * @notice Unbinds a token from the pool
    * @param token The address of the token to unbind
    */
-  function unbind(address token) external;
+  function unbind(
+    address token
+  ) external;
 
   /**
    * @notice Joins a pool, providing each token in the pool with a proportional amount
    * @param poolAmountOut The amount of pool tokens to mint
    * @param maxAmountsIn The maximum amount of tokens to send to the pool
    */
-  function joinPool(uint256 poolAmountOut, uint256[] calldata maxAmountsIn) external;
+  function joinPool(
+    uint256 poolAmountOut,
+    uint256[] calldata maxAmountsIn
+  ) external;
 
   /**
    * @notice Exits a pool, receiving each token in the pool with a proportional amount
    * @param poolAmountIn The amount of pool tokens to burn
    * @param minAmountsOut The minimum amount of tokens to receive from the pool
    */
-  function exitPool(uint256 poolAmountIn, uint256[] calldata minAmountsOut) external;
+  function exitPool(
+    uint256 poolAmountIn,
+    uint256[] calldata minAmountsOut
+  ) external;
 
   /**
    * @notice Swaps an exact amount of tokens in for an amount of tokens out
@@ -288,7 +304,10 @@ interface IBPool is IERC20 {
    * @param tokenOut The address of the token to swap out
    * @return spotPrice The spot price of the swap
    */
-  function getSpotPrice(address tokenIn, address tokenOut) external view returns (uint256 spotPrice);
+  function getSpotPrice(
+    address tokenIn,
+    address tokenOut
+  ) external view returns (uint256 spotPrice);
 
   /**
    * @notice Gets the spot price of tokenIn in terms of tokenOut without the fee
@@ -296,7 +315,10 @@ interface IBPool is IERC20 {
    * @param tokenOut The address of the token to swap out
    * @return spotPrice The spot price of the swap without the fee
    */
-  function getSpotPriceSansFee(address tokenIn, address tokenOut) external view returns (uint256 spotPrice);
+  function getSpotPriceSansFee(
+    address tokenIn,
+    address tokenOut
+  ) external view returns (uint256 spotPrice);
 
   /**
    * @notice Gets the finalized status of the pool
@@ -309,7 +331,9 @@ interface IBPool is IERC20 {
    * @param t The address of the token to check
    * @return isBound True if the token is bound, False otherwise
    */
-  function isBound(address t) external view returns (bool isBound);
+  function isBound(
+    address t
+  ) external view returns (bool isBound);
 
   /**
    * @notice Gets the number of tokens in the pool
@@ -334,7 +358,9 @@ interface IBPool is IERC20 {
    * @param token The address of the token to check
    * @return denormWeight The denormalized weight of the token in the pool
    */
-  function getDenormalizedWeight(address token) external view returns (uint256 denormWeight);
+  function getDenormalizedWeight(
+    address token
+  ) external view returns (uint256 denormWeight);
 
   /**
    * @notice Gets the total denormalized weight of the pool
@@ -347,14 +373,18 @@ interface IBPool is IERC20 {
    * @param token The address of the token to check
    * @return normWeight The normalized weight of the token in the pool
    */
-  function getNormalizedWeight(address token) external view returns (uint256 normWeight);
+  function getNormalizedWeight(
+    address token
+  ) external view returns (uint256 normWeight);
 
   /**
    * @notice Gets the Pool's ERC20 balance of a token
    * @param token The address of the token to check
    * @return balance The Pool's ERC20 balance of the token
    */
-  function getBalance(address token) external view returns (uint256 balance);
+  function getBalance(
+    address token
+  ) external view returns (uint256 balance);
 
   /**
    * @notice Gets the swap fee of the pool

@@ -10,5 +10,7 @@ interface IFaucet {
    * @notice Drips an amount of tokens to the caller.
    * @param token The address of the token to drip.
    */
-  function drip(address token) external;
+  function drip(
+    address token
+  ) external;
 }

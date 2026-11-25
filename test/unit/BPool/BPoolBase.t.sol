@@ -23,7 +23,9 @@ contract BPoolBase is Test, BConst {
     tokens.push(makeAddr('token1'));
   }
 
-  function _getDeterministicTokenArray(uint256 _length) internal returns (address[] memory _tokenArray) {
+  function _getDeterministicTokenArray(
+    uint256 _length
+  ) internal returns (address[] memory _tokenArray) {
     _tokenArray = new address[](_length);
     for (uint256 i = 0; i < _length; i++) {
       _tokenArray[i] = makeAddr(i.toString());
@@ -37,7 +39,9 @@ contract BPoolBase is Test, BConst {
     }
   }
 
-  function _setRandomTokens(uint256 _length) internal returns (address[] memory _tokensToAdd) {
+  function _setRandomTokens(
+    uint256 _length
+  ) internal returns (address[] memory _tokensToAdd) {
     _tokensToAdd = _getDeterministicTokenArray(_length);
     for (uint256 i = 0; i < _length; i++) {
       bPool.set__records(_tokensToAdd[i], IBPool.Record({bound: true, index: i, denorm: 0}));
