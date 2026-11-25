@@ -34,16 +34,15 @@ yarn test    # run the tests
 - Implemented reentrancy locks using transient storage.
 - Deprecated `joinswap` and `exitswap` methods (avoid single-token math precision issues)
 
-## Features on BCoWPool (added via inheritance to BPool)
-- Immutably stores CoW Protocol's `SolutionSettler` and `VaultRelayer` addresses at deployment
-- Immutably stores Cow Protocol's a Domain Separator at deployment (to avoid replay attacks)
-- Immutably stores Cow Protocol's `GPv2Order.appData` to be allowed to swap
-- Gives infinite ERC20 approval to the CoW Protocol's `VaultRelayer` contract at finalization time.
-- Implements IERC1271 `isValidSignature` method to allow for validating intentions of swaps
-- Implements a `commit` method to avoid multiple swaps from conflicting with each other.
-  - This is stored in the same transient storage slot as reentrancy locks in order to prevent calls to swap/join functions within a settlement execution or vice versa.
-  - It's an error to override a commitment since that could be used to clear reentrancy locks. Commitments can only be cleared by ending a transaction.
-- Validates the `GPv2Order` requirements before allowing the swap
+## Features on BCoWPool
+
+- Curator-signed, fill-or-kill standing orders accepted through ERC-1271.
+- Canonical appData containing an order-specific `commit(h0, buyAmount)` pre-hook and `transferFee()` post-hook.
+- Transaction-scoped reserve locks and the existing Balancer curve check protect liquidity.
+- Curator fees come from limit surplus and are held in a separate escrow for withdrawal.
+- Creator-controlled curator replacement and monotonic epoch revocation.
+
+See [the design](docs/curated-standing-orders.md) and [curator operations and migration](docs/curator-operations.md) for deployment settings, exact signing bytes, hook budgets and validation limits.
 
 ## Features on BCoWFactory
 - Added a `logBCoWPool` to log the finalization of BCoWPool contracts, to be called by a child pool.
@@ -52,7 +51,7 @@ yarn test    # run the tests
 - Supports the full set of tokens bound to a finalized pool.
 - Returns the pairwise order with the greatest surplus at the supplied price vector.
 - Bounds candidate output by Balancer's `MAX_OUT_RATIO` before inverse quoting, then bounds input by `MAX_IN_RATIO`.
-- Keeps one pool order per settlement, using the existing transient commitment lock.
+- Returns unsigned curator quotes with canonical appData and both settlement hooks. The curator must sign before posting.
 - Supports explicit token pairs in the amount-specific helper overloads; legacy methods remain two-token-only.
 
 ## Local seven-asset settlement

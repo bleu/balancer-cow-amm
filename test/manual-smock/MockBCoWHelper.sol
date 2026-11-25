@@ -15,12 +15,11 @@ import {Test} from 'forge-std/Test.sol';
 
 contract MockBCoWHelper is BCoWHelper, Test {
   // NOTE: manually added methods (internal immutable exposers not supported in smock)
-  function call__APP_DATA() external view returns (bytes32) {
-    return _APP_DATA;
-  }
 
   // NOTE: manually added method (public overrides not supported in smock)
-  function tokens(address pool) public view override returns (address[] memory tokens_) {
+  function tokens(
+    address pool
+  ) public view override returns (address[] memory tokens_) {
     (bool _success, bytes memory _data) = address(this).staticcall(abi.encodeWithSignature('tokens(address)', pool));
 
     if (_success) return abi.decode(_data, (address[]));
@@ -28,12 +27,16 @@ contract MockBCoWHelper is BCoWHelper, Test {
   }
 
   // NOTE: manually added method (public overrides not supported in smock)
-  function expectCall_tokens(address pool) public {
+  function expectCall_tokens(
+    address pool
+  ) public {
     vm.expectCall(address(this), abi.encodeWithSignature('tokens(address)', pool));
   }
 
   // BCoWHelper methods
-  constructor(address factory_) BCoWHelper(factory_) {}
+  constructor(
+    address factory_
+  ) BCoWHelper(factory_) {}
 
   function mock_call_order(
     address pool,
@@ -50,7 +53,10 @@ contract MockBCoWHelper is BCoWHelper, Test {
     );
   }
 
-  function mock_call_tokens(address pool, address[] memory tokens_) public {
+  function mock_call_tokens(
+    address pool,
+    address[] memory tokens_
+  ) public {
     vm.mockCall(address(this), abi.encodeWithSignature('tokens(address)', pool), abi.encode(tokens_));
   }
 }

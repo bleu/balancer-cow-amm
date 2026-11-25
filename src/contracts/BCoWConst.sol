@@ -6,10 +6,9 @@ pragma solidity 0.8.25;
  * @notice Constants used in the scope of the BCoWPool contract.
  */
 contract BCoWConst {
-  /**
-   * @notice The largest possible duration of any AMM order, starting from the
-   * current block timestamp.
-   * @return _maxOrderDuration The maximum order duration.
-   */
+  /// @notice Minimum lifetime setting; allow additional order-book latency at deployment.
+  uint32 public constant MIN_ORDER_DURATION = 60 seconds;
+
+  /// @notice Largest future validity allowed for any AMM order, in seconds.
   uint32 public constant MAX_ORDER_DURATION = 5 minutes;
 }

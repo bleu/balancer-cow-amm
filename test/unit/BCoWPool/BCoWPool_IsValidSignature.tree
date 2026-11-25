@@ -1,10 +1,20 @@
 BCoWPool::IsValidSignature
-├── when orders appdata is different than one set at construction
-│   └── it should revert
-├── when orderHash does not match hashed order
-│   └── it should revert
-├── when hashed order does not match commitment
-│   └── it should revert
-└── when preconditions are met
-    ├── it calls verify
-    └── it returns EIP-1271 magic value
+├── it hook gas eight tokens
+├── it signature cannot replay on another pool or chain
+├── it valid curator order
+├── it no commit and wrong amount rejected
+├── it stolen curator key cannot authorize below curve trade
+├── it wrong app data cannot share commitment
+├── it wrong message hash and signer
+├── it only curator can raise epoch
+├── it replace curator invalidates old signatures
+├── it commit restricts liquidity and swaps and second commit
+├── it trampoline ignores second commit but second order stays invalid
+├── it only settlement and trampoline can run hooks
+├── it zero commitment cannot clear mutex
+├── it settings bounds and factory creator
+├── it partial fill and long duration rejected
+├── it all42 m7 fee directions
+├── it no fill and multiple deltas do not pay
+├── it blocked curator can earn and withdraw to alternate recipient
+└── it earned fees withdraw to chosen recipient

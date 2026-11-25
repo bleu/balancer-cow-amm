@@ -3,8 +3,9 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { ethers } from 'ethers';
+import { signCuratedOrder } from './curated-order.mjs';
 import { root, provider, manager, solver, trader, chainId, contract, deploy, deployM7,
-  load, asOrder, trade, orderTuple, pairInvariant, allocationDrift, isNoOrder } from './m7.mjs';
+  load, asOrder, trade, pairInvariant, allocationDrift, isNoOrder } from './m7.mjs';
 
 const reportPath = resolve(root, '.local/auction.json');
 const unit = 10n ** 18n;
@@ -49,7 +50,7 @@ async function setup() {
   const authentication = await contract('GPv2AllowListAuthentication', state.authentication);
   await (await authentication.addSolver(bidderB.address)).wait();
   const factory = await contract('BCoWFactory', state.factory);
-  const receipt = await (await factory.newBPool('Ordinary M7 control', 'M7C')).wait();
+  const receipt = await (await factory['newBPool(string,string)']('Ordinary M7 control', 'M7C')).wait();
   const ordinary = await contract('BCoWPool', receipt.events.find((event) => event.event === 'LOG_NEW_POOL').args.bPool);
   for (let i = 0; i < tokens.length; ++i) {
     const amount = (await tokens[i].balanceOf(state.pool)).toString();
@@ -82,6 +83,7 @@ async function setup() {
   const actors = { protected: state.pool, ordinary: ordinary.address, settlement: settlement.address,
     solverA: solver.address, solverB: bidderB.address, arbitrageur: trader.address,
     executor: executor.address, manager: manager.address,
+    curatorEscrow: await (await contract('BCoWPool', state.pool)).feeEscrow(),
     venueA: venues[0].address, venueB: venues[1].address,
     controlVenueA: venues[2].address, controlVenueB: venues[3].address, scarceVenue: venues[4].address };
   return { state, tokens, addresses, prices, settlement, ordinary, executor, venues, actors,
@@ -125,11 +127,12 @@ function gasAccounting(before, after, sender, receipt) {
 
 async function orderFor(ctx, pool) {
   const result = await ctx.helper.order(pool, ctx.prices.map(String));
-  const order = asOrder(result[0]);
+  const signed = await signCuratedOrder(asOrder(result[0]), await contract('BCoWPool', pool), manager, chainId, ctx.state.settlement);
+  const order = signed.order;
   const sell = ctx.addresses.findIndex((address) => address.toLowerCase() === order.sellToken.toLowerCase());
   const buy = ctx.addresses.findIndex((address) => address.toLowerCase() === order.buyToken.toLowerCase());
   assert.ok(sell >= 0 && buy >= 0 && sell !== buy);
-  return { order, pre: result[1].map(({ target, value: amount, callData }) => ({ target, value: amount, callData })),
+  return { order, pre: [signed.pre], post: signed.post, signature: signed.signature,
     sell, buy, sold: BigInt(order.sellAmount.toString()), minimum: BigInt(order.buyAmount.toString()) };
 }
 
@@ -175,8 +178,8 @@ function settlementData(ctx, selected, bid) {
   const clearingPrices = ctx.prices.map(String);
   clearingPrices[selected.sell] = bid.receive.toString();
   clearingPrices[selected.buy] = selected.sold.toString();
-  const signature = ethers.utils.hexConcat([ctx.state.pool,
-    ethers.utils.defaultAbiCoder.encode([orderTuple], [selected.order])]);
+  const signature = selected.signature;
+  post.push(selected.post);
   return ctx.settlement.interface.encodeFunctionData('settle', [ctx.addresses, clearingPrices,
     [trade(selected.order, selected.sell, selected.buy, signature, 0x40)], [selected.pre, intra, post]]);
 }
@@ -188,12 +191,17 @@ function verifyTrade(ctx, selected, bid, before, after, receipt) {
       assert.ok(BigInt(after.accounts[name][i]) >= BigInt(before.accounts[name][i]), 'solver-capital-contribution');
     }
   }
+  const fee = BigInt(after.accounts.curatorEscrow[selected.buy]) - BigInt(before.accounts.curatorEscrow[selected.buy]);
+  const feeLog = receipt.logs.filter((log) => log.address.toLowerCase() === ctx.pool.address.toLowerCase())
+    .map((log) => ctx.pool.interface.parseLog(log)).find((log) => log.name === 'CuratorFeePaid');
+  assert.equal(fee, BigInt(feeLog?.args.amount.toString() ?? '0'), 'Escrow movement must match the pool fee event');
   const venueName = bid.venueIndex === 0 ? 'venueA' : 'venueB';
   for (const [name, amounts] of Object.entries(before.accounts)) {
     for (let i = 0; i < ctx.tokens.length; ++i) {
       let delta = 0n;
       if (name === 'protected' && i === selected.sell) delta = -selected.sold;
-      if (name === 'protected' && i === selected.buy) delta = bid.receive;
+      if (name === 'protected' && i === selected.buy) delta = bid.receive - fee;
+      if (name === 'curatorEscrow' && i === selected.buy) delta = fee;
       if (name === venueName && i === selected.sell) delta = selected.sold;
       if (name === venueName && i === selected.buy) delta = -bid.gross;
       if (name === bid.signerName && i === selected.buy) delta = bid.gross - bid.receive;
@@ -208,7 +216,8 @@ function verifyTrade(ctx, selected, bid, before, after, receipt) {
   assert.ok(solverValue / unit - gasWei * ethUsd / unit >= minProfitUsd, 'insufficient-net-solver-profit');
   // Score only the measured incoming delta above the fixed canonical minimum.
   const received = BigInt(after.accounts.protected[selected.buy]) - BigInt(before.accounts.protected[selected.buy]);
-  return { score: (received - selected.minimum) * ctx.prices[selected.buy], gasWei,
+  return { score: (received - selected.minimum) * ctx.prices[selected.buy], gasWei, curatorFee: fee,
+    curatorFeeUsd: fee * ctx.prices[selected.buy] / unit,
     gasUsd: gasWei * ethUsd / unit, solverGrossUsd: solverValue / unit,
     solverNetUsd: solverValue / unit - gasWei * ethUsd / unit };
 }
@@ -303,7 +312,7 @@ async function protectedRound(ctx, index) {
   assert.equal(measured.score, winner.score, 'Winner did not realize its simulated score');
   const routeCost = selected.sold * ctx.prices[selected.sell] - winner.gross * ctx.prices[selected.buy];
   const opportunity = selected.sold * ctx.prices[selected.sell] - selected.minimum * ctx.prices[selected.buy];
-  assert.equal(opportunity, measured.score + (winner.gross - winner.receive) * ctx.prices[selected.buy] + routeCost);
+  assert.equal(opportunity, measured.score + (winner.gross - winner.receive + measured.curatorFee) * ctx.prices[selected.buy] + routeCost);
   return { status: 'executed', selected, proposals, winner: winner.signerName,
     venueIndex: winner.venueIndex, receive: winner.receive, gross: winner.gross,
     calldata: winner.calldata, transactionHash: receipt.transactionHash, blockNumber: receipt.blockNumber,
@@ -361,7 +370,7 @@ async function run() {
   const ctx = await setup();
   ctx.initial = await snapshot(ctx);
   const initialBlockNumber = Number(await provider.send('eth_blockNumber', []));
-  const report = { initialBlockNumber, version: 1, chainId, assets: ctx.state.tokens, actors: ctx.actors,
+  const report = { initialBlockNumber, version: 2, chainId, assets: ctx.state.tokens, actors: ctx.actors,
     helper: ctx.helper.address, authentication: ctx.state.authentication,
     assumptions: { prices: ctx.prices, ordinaryFee, venueFeeBps: [10, 30], gasPriceWei: gasPrice,
       gasLimit, ethUsd, minProfitUsd, gasBudgetUsd, maxRounds: 32,
@@ -472,7 +481,7 @@ async function verify() {
           // state without changing the running chain or consuming balances.
           await provider.call({ from: ctx.actors[bid.signerName], to: ctx.actors.settlement,
             data: calldata, ...txOptions }, receipt.blockNumber - 1);
-          assert.equal(((bid.receive - selected.minimum) * ctx.prices[selected.buy]).toString(), proposal.score);
+          assert.equal(((bid.receive - selected.minimum - BigInt(proposal.curatorFee ?? 0)) * ctx.prices[selected.buy]).toString(), proposal.score);
           assert.ok(BigInt(proposal.score) <= BigInt(round.score), 'A higher measured bid was not selected');
         }
         assert.equal(receipt.from.toLowerCase(), report.actors[round.winner].toLowerCase());

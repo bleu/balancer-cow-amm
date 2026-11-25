@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {IBFactory} from 'interfaces/IBFactory.sol';
+import {IBPool} from 'interfaces/IBPool.sol';
 
 interface IBCoWFactory is IBFactory {
   /**
@@ -28,11 +29,23 @@ interface IBCoWFactory is IBFactory {
   // solhint-disable-next-line style-guide-casing
   function SOLUTION_SETTLER() external view returns (address solutionSettler);
 
-  /**
-   * @notice The identifier describing which `GPv2Order.AppData` currently
-   * apply to this AMM.
-   * @return appData The 32 bytes identifier of the allowed GPv2Order AppData.
-   */
+  /// @notice Trampoline authorized to run settlement hooks for newly deployed pools.
+  /// @return Trampoline address.
   // solhint-disable-next-line style-guide-casing
-  function APP_DATA() external view returns (bytes32 appData);
+  function HOOKS_TRAMPOLINE() external view returns (address);
+
+  /// @notice Deploys a pool with custom curator settings; caller is the immutable creator.
+  /// @param name LP token name.
+  /// @param symbol LP token symbol.
+  /// @param curator Initial ECDSA signer.
+  /// @param duration Maximum future order validity, in seconds.
+  /// @param feeBps Share of limit surplus, in basis points.
+  /// @return pool Newly deployed pool.
+  function newBPool(
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps
+  ) external returns (IBPool pool);
 }

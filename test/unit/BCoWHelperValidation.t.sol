@@ -33,7 +33,7 @@ abstract contract BCoWHelperValidationFixture is Test {
     settlement = makeAddr('settlement');
     vm.mockCall(settlement, abi.encodeCall(ISettlement.domainSeparator, ()), abi.encode(bytes32('domain')));
     vm.mockCall(settlement, abi.encodeCall(ISettlement.vaultRelayer, ()), abi.encode(makeAddr('relayer')));
-    factory = new BCoWFactory(settlement, bytes32('appData'), address(this));
+    factory = new BCoWFactory(settlement, address(0x1234), address(this));
     helper = new BCoWHelper(address(factory));
   }
 
@@ -103,12 +103,14 @@ contract BCoWHelperValidationTest is BCoWHelperValidationFixture {
     pool.verify(order);
     assertEq(pre.length, 1);
     assertEq(pre[0].target, address(pool));
-    assertEq(sig.length, 20 + abi.encode(order).length);
+    assertEq(sig, abi.encodePacked(address(pool), abi.encode(order, uint256(0), bytes(''))));
     vm.prank(settlement);
     (bool success,) = pre[0].target.call(pre[0].callData);
     assertTrue(success);
     bytes32 orderHash = GPv2Order.hash(order, pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
-    assertEq(pool.isValidSignature(orderHash, abi.encode(order)), bytes4(0x1626ba7e));
+    // Quotes deliberately carry no curator signature and cannot authorize a fill.
+    vm.expectRevert();
+    pool.isValidSignature(orderHash, abi.encode(order, uint256(0), bytes('')));
   }
 
   function test_MixedRawTokenUnitsProduceValidOrder() public {

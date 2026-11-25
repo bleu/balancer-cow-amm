@@ -17,7 +17,7 @@ contract HalmosBalancer is HalmosTest {
   BConst bconst;
 
   address solutionSettler;
-  bytes32 appData;
+  address hooksTrampoline = address(0x1234);
 
   FuzzERC20[] tokens;
   IBCoWPool pool;
@@ -26,7 +26,7 @@ contract HalmosBalancer is HalmosTest {
 
   constructor() {
     solutionSettler = address(new MockSettler());
-    factory = new BCoWFactory(solutionSettler, appData);
+    factory = new BCoWFactory(solutionSettler, hooksTrampoline);
     bconst = new BConst();
     pool = IBCoWPool(address(factory.newBPool('Balancer Pool Token', 'BPT')));
 
@@ -56,7 +56,9 @@ contract HalmosBalancer is HalmosTest {
 
   /// @custom:property-id 1
   /// @custom:property BFactory should always be able to deploy new pools
-  function check_BFactoryAlwaysDeploy(address _caller) public {
+  function check_BFactoryAlwaysDeploy(
+    address _caller
+  ) public {
     // Precondition
     vm.assume(_caller != address(0));
     vm.prank(_caller);
@@ -109,7 +111,9 @@ contract HalmosBalancer is HalmosTest {
   /// @custom:property-id 7
   /// @custom:property total weight can be up to 50e18
   /// @dev Only 2 tokens are used, to avoid hitting the limit in loop unrolling
-  function check_totalWeightMax(uint256[2] calldata _weights) public {
+  function check_totalWeightMax(
+    uint256[2] calldata _weights
+  ) public {
     // Precondition
     IBCoWPool _pool = IBCoWPool(address(factory.newBPool('Balancer Pool Token', 'BPT')));
 
@@ -144,7 +148,11 @@ contract HalmosBalancer is HalmosTest {
 
   /// @custom:property-id 8
   /// @custom:property  BToken increaseApproval should increase the approval of the address by the amount
-  function check_increaseApproval(uint256 _approvalToAdd, address _owner, address _spender) public {
+  function check_increaseApproval(
+    uint256 _approvalToAdd,
+    address _owner,
+    address _spender
+  ) public {
     // Precondition
     uint256 _approvalBefore = pool.allowance(_owner, _spender);
 
@@ -159,7 +167,11 @@ contract HalmosBalancer is HalmosTest {
   /// @custom:property-id 9
   /// @custom:property BToken decreaseApproval should decrease the approval to max(old-amount, 0)
 
-  function check_decreaseApproval(uint256 _approvalToLower, address _owner, address _spender) public {
+  function check_decreaseApproval(
+    uint256 _approvalToLower,
+    address _owner,
+    address _spender
+  ) public {
     // Precondition
     uint256 _approvalBefore = pool.allowance(_owner, _spender);
 
@@ -279,7 +291,7 @@ contract HalmosBalancer is HalmosTest {
     vm.prank(currentCaller);
 
     // Action
-    try pool.commit(hex'1234') {
+    try pool.commit(hex'1234', 1) {
       // Postcondition
       assert(currentCaller == solutionSettler);
     } catch {}

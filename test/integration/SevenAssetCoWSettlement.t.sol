@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {HooksTrampoline} from '../vendor/HooksTrampoline.sol';
 import {GPv2TradeEncoder} from '@composable-cow/test/vendored/GPv2TradeEncoder.sol';
 import {IERC20} from '@cowprotocol/interfaces/IERC20.sol';
 import {GPv2Interaction} from '@cowprotocol/libraries/GPv2Interaction.sol';
@@ -47,6 +48,8 @@ abstract contract SevenAssetSettlementChecks is Test {
   uint256 internal constant TRADER_KEY = 0x123456;
   BCoWPool internal pool;
   BCoWHelper internal helper;
+  HooksTrampoline internal trampoline;
+  uint256 internal constant CURATOR_KEY = 0xc01234;
   address internal trader;
   IERC20[] internal tokens;
   uint256[] internal weights;
@@ -73,9 +76,10 @@ abstract contract SevenAssetSettlementChecks is Test {
     settlement = settlement_;
     solver = solver_;
     trader = vm.addr(TRADER_KEY);
-    BCoWFactory factory = new BCoWFactory(address(settlement), bytes32('seven-asset-test'), address(this));
+    trampoline = new HooksTrampoline(address(settlement));
+    BCoWFactory factory = new BCoWFactory(address(settlement), address(trampoline), address(this));
     helper = new BCoWHelper(address(factory));
-    pool = BCoWPool(address(factory.newBPool('M7 portfolio', 'M7')));
+    pool = BCoWPool(address(factory.newBPool('M7 portfolio', 'M7', vm.addr(CURATOR_KEY), 180, 100)));
     uint8[7] memory decimals = [uint8(18), 6, 8, 18, 6, 18, 8];
     uint256[7] memory units = [uint256(8), 6, 6, 6, 6, 4, 4];
     for (uint256 i; i < 7; ++i) {
@@ -122,7 +126,9 @@ abstract contract SevenAssetSettlementChecks is Test {
     batch.interactions[0] = new GPv2Interaction.Data[](2);
     batch.interactions[0][0] = first;
     batch.interactions[0][1] = GPv2Interaction.Data({
-      target: address(pool), value: 0, callData: abi.encodeWithSelector(pool.commit.selector, bytes32('second-order'))
+      target: address(pool),
+      value: 0,
+      callData: abi.encodeWithSelector(pool.commit.selector, bytes32('second-order'), uint256(1))
     });
     vm.expectRevert(IBPool.BPool_Reentrancy.selector);
     vm.prank(solver);
@@ -189,6 +195,10 @@ abstract contract SevenAssetSettlementChecks is Test {
         address(pool), address(batch.order.sellToken), address(batch.order.buyToken), batch.order.sellAmount
       );
     }
+    bytes32 hash = batch.order.hash(settlement.domainSeparator());
+    (uint8 v, bytes32 r, bytes32 s) = vm.sign(CURATOR_KEY, pool.curatorDigest(hash, 0));
+    poolSig = abi.encodePacked(address(pool), abi.encode(batch.order, uint256(0), abi.encodePacked(r, s, v)));
+    pre = _wrap(pre, 100_000);
     pool.verify(batch.order);
     (batch.sellIndex, batch.buyIndex) = _indices(batch.order);
 
@@ -207,7 +217,21 @@ abstract contract SevenAssetSettlementChecks is Test {
     batch.trades[1] = _counterTrade(batch);
     batch.interactions[0] = includeCommitment ? pre : new GPv2Interaction.Data[](0);
     batch.interactions[1] = new GPv2Interaction.Data[](0);
-    batch.interactions[2] = new GPv2Interaction.Data[](0);
+    GPv2Interaction.Data[] memory post = new GPv2Interaction.Data[](1);
+    post[0] = GPv2Interaction.Data(address(pool), 0, abi.encodeCall(pool.transferFee, ()));
+    batch.interactions[2] = _wrap(post, 150_000);
+  }
+
+  function _wrap(
+    GPv2Interaction.Data[] memory calls,
+    uint256 gasLimit
+  ) internal view returns (GPv2Interaction.Data[] memory wrapped) {
+    HooksTrampoline.Hook[] memory hooks = new HooksTrampoline.Hook[](calls.length);
+    for (uint256 i; i < calls.length; ++i) {
+      hooks[i] = HooksTrampoline.Hook(calls[i].target, calls[i].callData, gasLimit);
+    }
+    wrapped = new GPv2Interaction.Data[](1);
+    wrapped[0] = GPv2Interaction.Data(address(trampoline), 0, abi.encodeCall(trampoline.execute, (hooks)));
   }
 
   function _counterTrade(

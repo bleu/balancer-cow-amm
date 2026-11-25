@@ -35,7 +35,7 @@ contract DeployBCoWFactory is DeployBaseFactory {
   function _deployFactory() internal override returns (IBFactory bFactory) {
     bFactory = new BCoWFactory({
       solutionSettler: _bCoWFactoryDeploymentParams.settlement,
-      appData: _bCoWFactoryDeploymentParams.appData,
+      hooksTrampoline: _bCoWFactoryDeploymentParams.hooksTrampoline,
       bdaoMsig: _bCoWFactoryDeploymentParams.bDaoMsig
     });
 

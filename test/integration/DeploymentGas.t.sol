@@ -27,7 +27,7 @@ contract DeploymentIntegrationGasTest is Test, GasSnapshot {
     bFactory = new BFactory();
 
     solutionSettler = address(new MockSolutionSettler());
-    bCowFactory = new BCoWFactory(solutionSettler, bytes32('appData'), bdaoMsig);
+    bCowFactory = new BCoWFactory(solutionSettler, address(0x1234), bdaoMsig);
   }
 
   function testFactoryDeployment() public {
@@ -36,7 +36,7 @@ contract DeploymentIntegrationGasTest is Test, GasSnapshot {
     snapEnd();
 
     snapStart('newBCoWFactory');
-    new BCoWFactory(solutionSettler, bytes32('appData'), bdaoMsig);
+    new BCoWFactory(solutionSettler, address(0x1234), bdaoMsig);
     snapEnd();
   }
 

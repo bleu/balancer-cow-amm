@@ -12,6 +12,7 @@ import {GPv2Order} from '@cowprotocol/libraries/GPv2Order.sol';
 import {Math} from '@openzeppelin/contracts/utils/math/Math.sol';
 
 import {BCoWConst} from './BCoWConst.sol';
+import {BCoWPool} from './BCoWPool.sol';
 import {BMath} from './BMath.sol';
 
 /**
@@ -49,9 +50,6 @@ contract BCoWHelper is ICOWAMMPoolHelper, BMath, BCoWConst {
     uint256 surplus;
   }
 
-  /// @notice The app data used by this helper's factory.
-  bytes32 internal immutable _APP_DATA;
-
   /// @inheritdoc ICOWAMMPoolHelper
   // solhint-disable-next-line style-guide-casing
   address public immutable factory;
@@ -69,7 +67,6 @@ contract BCoWHelper is ICOWAMMPoolHelper, BMath, BCoWConst {
     address factory_
   ) {
     factory = factory_;
-    _APP_DATA = IBCoWFactory(factory_).APP_DATA();
   }
 
   /// @inheritdoc ICOWAMMPoolHelper
@@ -300,6 +297,12 @@ contract BCoWHelper is ICOWAMMPoolHelper, BMath, BCoWConst {
     }
   }
 
+  /// @notice Reads and validates an explicit quote pair.
+  /// @param pool Pool holding the tokens.
+  /// @param buyToken Incoming token address.
+  /// @param sellToken Outgoing token address.
+  /// @return reservesIn Incoming token reserves.
+  /// @return reservesOut Outgoing token reserves.
   function _pairReserves(
     address pool,
     address buyToken,
@@ -367,21 +370,24 @@ contract BCoWHelper is ICOWAMMPoolHelper, BMath, BCoWConst {
       bytes memory sig
     )
   {
-    // A ERC-1271 signature on CoW Protocol is composed of two parts: the
-    // signer address and the valid ERC-1271 signature data for that signer.
-    bytes memory eip1271sig;
-    eip1271sig = abi.encode(order_);
-    sig = abi.encodePacked(pool, eip1271sig);
-
-    // Generate the order commitment pre-interaction
-    bytes32 domainSeparator = IBCoWPool(pool).SOLUTION_SETTLER_DOMAIN_SEPARATOR();
-    bytes32 orderCommitment = order_.hash(domainSeparator);
+    order_.validTo = uint32(block.timestamp + BCoWPool(pool).orderDuration());
+    order_.partiallyFillable = false;
+    order_.appData = bytes32(0);
+    bytes32 orderCommitment = order_.hash(IBCoWPool(pool).SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    order_.appData = BCoWPool(pool).appDataHash(orderCommitment, order_.buyAmount);
+    // The curator supplies the missing signature off-chain before publication.
+    sig = abi.encodePacked(pool, abi.encode(order_, uint256(0), bytes('')));
 
     preInteractions = new GPv2Interaction.Data[](1);
     preInteractions[0] = GPv2Interaction.Data({
-      target: pool, value: 0, callData: abi.encodeWithSelector(IBCoWPool.commit.selector, orderCommitment)
+      target: pool,
+      value: 0,
+      callData: abi.encodeWithSelector(IBCoWPool.commit.selector, orderCommitment, order_.buyAmount)
     });
 
+    postInteractions = new GPv2Interaction.Data[](1);
+    postInteractions[0] =
+      GPv2Interaction.Data({target: pool, value: 0, callData: abi.encodeWithSelector(IBCoWPool.transferFee.selector)});
     return (preInteractions, postInteractions, sig);
   }
 
@@ -420,10 +426,10 @@ contract BCoWHelper is ICOWAMMPoolHelper, BMath, BCoWConst {
       sellAmount: amountOut,
       buyAmount: amountIn,
       validTo: uint32(block.timestamp) + MAX_ORDER_DURATION,
-      appData: _APP_DATA,
+      appData: bytes32(0),
       feeAmount: 0,
       kind: GPv2Order.KIND_SELL,
-      partiallyFillable: true,
+      partiallyFillable: false,
       sellTokenBalance: GPv2Order.BALANCE_ERC20,
       buyTokenBalance: GPv2Order.BALANCE_ERC20
     });

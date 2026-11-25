@@ -9,7 +9,7 @@ abstract contract Params {
 
   struct BCoWFactoryDeploymentParams {
     address settlement;
-    bytes32 appData;
+    address hooksTrampoline;
     address bDaoMsig;
   }
 
@@ -33,15 +33,6 @@ abstract contract Params {
   /// chainId == 8453
   address internal constant _B_DAO_MSIG_BASE = 0xC40DCFB13651e64C8551007aa57F9260827B6462;
 
-  /**
-   * @notice AppData identifier
-   * @dev Value obtained from https://explorer.cow.fi/appdata?tab=encode
-   *      - appCode: "CoW AMM Balancer"
-   *      - metadata:hooks:version: 0.1.0
-   *      - version: 1.1.0
-   */
-  bytes32 internal constant _APP_DATA = 0x362e5182440b52aa8fffe70a251550fbbcbca424740fe5a14f59bf0c1b06fe1d;
-
   /// @notice BFactory deployment parameters
   BFactoryDeploymentParams internal _bFactoryDeploymentParams;
 
@@ -54,28 +45,53 @@ abstract contract Params {
     if (chainId == 1) {
       // Ethereum Mainnet
       _bFactoryDeploymentParams = BFactoryDeploymentParams({bDao: _B_DAO});
-      _bCoWFactoryDeploymentParams =
-        BCoWFactoryDeploymentParams({settlement: _GPV2_SETTLEMENT, appData: _APP_DATA, bDaoMsig: _B_DAO_MSIG_MAINNET});
+      _bCoWFactoryDeploymentParams = BCoWFactoryDeploymentParams({
+        settlement: _GPV2_SETTLEMENT,
+        hooksTrampoline: chainId == 100
+          ? 0x01DcB88678aedD0C4cC9552B20F4718550250574
+          : 0x60Bf78233f48eC42eE3F101b9a05eC7878728006,
+        bDaoMsig: _B_DAO_MSIG_MAINNET
+      });
     } else if (chainId == 100) {
       // Gnosis Chain
       _bFactoryDeploymentParams = BFactoryDeploymentParams({bDao: _B_DAO});
-      _bCoWFactoryDeploymentParams =
-        BCoWFactoryDeploymentParams({settlement: _GPV2_SETTLEMENT, appData: _APP_DATA, bDaoMsig: _B_DAO_MSIG_GNOSIS});
+      _bCoWFactoryDeploymentParams = BCoWFactoryDeploymentParams({
+        settlement: _GPV2_SETTLEMENT,
+        hooksTrampoline: chainId == 100
+          ? 0x01DcB88678aedD0C4cC9552B20F4718550250574
+          : 0x60Bf78233f48eC42eE3F101b9a05eC7878728006,
+        bDaoMsig: _B_DAO_MSIG_GNOSIS
+      });
     } else if (chainId == 11_155_111) {
       // Sepolia
       _bFactoryDeploymentParams = BFactoryDeploymentParams({bDao: _B_DAO});
-      _bCoWFactoryDeploymentParams =
-        BCoWFactoryDeploymentParams({settlement: _GPV2_SETTLEMENT, appData: _APP_DATA, bDaoMsig: _SEPOLIA_JUANI_EOA});
+      _bCoWFactoryDeploymentParams = BCoWFactoryDeploymentParams({
+        settlement: _GPV2_SETTLEMENT,
+        hooksTrampoline: chainId == 100
+          ? 0x01DcB88678aedD0C4cC9552B20F4718550250574
+          : 0x60Bf78233f48eC42eE3F101b9a05eC7878728006,
+        bDaoMsig: _SEPOLIA_JUANI_EOA
+      });
     } else if (chainId == 42_161) {
       // Arbitrum
       _bFactoryDeploymentParams = BFactoryDeploymentParams({bDao: _B_DAO});
-      _bCoWFactoryDeploymentParams =
-        BCoWFactoryDeploymentParams({settlement: _GPV2_SETTLEMENT, appData: _APP_DATA, bDaoMsig: _B_DAO_MSIG_MAINNET});
+      _bCoWFactoryDeploymentParams = BCoWFactoryDeploymentParams({
+        settlement: _GPV2_SETTLEMENT,
+        hooksTrampoline: chainId == 100
+          ? 0x01DcB88678aedD0C4cC9552B20F4718550250574
+          : 0x60Bf78233f48eC42eE3F101b9a05eC7878728006,
+        bDaoMsig: _B_DAO_MSIG_MAINNET
+      });
     } else if (chainId == 8453) {
       // Base
       _bFactoryDeploymentParams = BFactoryDeploymentParams({bDao: _B_DAO});
-      _bCoWFactoryDeploymentParams =
-        BCoWFactoryDeploymentParams({settlement: _GPV2_SETTLEMENT, appData: _APP_DATA, bDaoMsig: _B_DAO_MSIG_BASE});
+      _bCoWFactoryDeploymentParams = BCoWFactoryDeploymentParams({
+        settlement: _GPV2_SETTLEMENT,
+        hooksTrampoline: chainId == 100
+          ? 0x01DcB88678aedD0C4cC9552B20F4718550250574
+          : 0x60Bf78233f48eC42eE3F101b9a05eC7878728006,
+        bDaoMsig: _B_DAO_MSIG_BASE
+      });
     } else {
       revert('Params: unknown chain ID');
     }

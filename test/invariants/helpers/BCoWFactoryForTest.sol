@@ -9,14 +9,22 @@ import {IBFactory} from 'interfaces/IBFactory.sol';
 import {IBPool} from 'interfaces/IBPool.sol';
 
 contract BCoWFactoryForTest is BCoWFactory {
-  constructor(address cowSolutionSettler, bytes32 appData) BCoWFactory(cowSolutionSettler, appData, address(0)) {}
+  constructor(
+    address cowSolutionSettler,
+    address hooksTrampoline
+  ) BCoWFactory(cowSolutionSettler, hooksTrampoline, address(0)) {}
 
-  function _newBPool(string memory, string memory) internal virtual override returns (IBPool bCoWPool) {
-    bCoWPool = new BCoWPoolForTest(SOLUTION_SETTLER, APP_DATA);
+  function _newBPool(
+    string memory,
+    string memory
+  ) internal virtual override returns (IBPool bCoWPool) {
+    bCoWPool = new BCoWPoolForTest(SOLUTION_SETTLER, HOOKS_TRAMPOLINE, msg.sender);
   }
 
   /// @dev workaround for hevm not supporting mcopy
-  function collect(IBPool bPool) external override(BFactory, IBFactory) {
+  function collect(
+    IBPool bPool
+  ) external override(BFactory, IBFactory) {
     if (msg.sender != _bDao) {
       revert BFactory_NotBDao();
     }

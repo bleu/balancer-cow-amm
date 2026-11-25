@@ -7,6 +7,36 @@ import {IBPool} from 'interfaces/IBPool.sol';
 import {ISettlement} from 'interfaces/ISettlement.sol';
 
 interface IBCoWPool is IERC1271, IBPool {
+  /// @notice The creator replaced the authorized signer.
+  /// @param oldCurator Previous signer.
+  /// @param newCurator New signer.
+  event CuratorChanged(address indexed oldCurator, address indexed newCurator);
+  /// @notice The curator raised its minimum signing epoch.
+  /// @param minEpoch Lowest epoch accepted from now on.
+  event OrdersRevoked(uint256 minEpoch);
+  /// @notice A fill paid the curator's fee to escrow.
+  /// @param curator Beneficiary credited in escrow.
+  /// @param token Incoming token used for payment.
+  /// @param amount Fee in raw token units.
+  event CuratorFeePaid(address indexed curator, address indexed token, uint256 amount);
+
+  /// @notice Deployment settings exceed the supported duration or fee bounds.
+  error InvalidSettings();
+  /// @notice Only the immutable creator may replace the curator.
+  error OnlyCreator();
+  /// @notice Only the current curator may revoke epochs.
+  error OnlyCurator();
+  /// @notice Signing epoch is revoked or a revocation does not increase it.
+  error InvalidEpoch();
+  /// @notice Signature was not produced by the current curator.
+  error InvalidCuratorSignature();
+  /// @notice Fee hook requires an unconsumed transaction commitment.
+  error NoPendingCommitment();
+  /// @notice Reserve changes do not identify one funded sell trade.
+  error InvalidTradeDeltas();
+  /// @notice Standing orders must be fill-or-kill.
+  error PartialFillNotAllowed();
+
   /**
    * @notice Thrown when a CoW order has a non-zero fee
    */
@@ -52,7 +82,7 @@ interface IBCoWPool is IERC1271, IBPool {
 
   /**
    * @notice Thrown when AppData that was provided during signature verification
-   * does not match the one stored in this contract.
+   * does not match the canonical document derived for this commitment.
    */
   error AppDataDoesNotMatch();
 
@@ -66,10 +96,16 @@ interface IBCoWPool is IERC1271, IBPool {
    * with the specified hash.
    * @dev The commitment is used to enforce that exactly one AMM order is
    * valid when a CoW Protocol batch is settled.
-   * @param orderHash the order hash that will be enforced by the order
-   * verification function.
+   * @param orderHash CoW EIP-712 order digest with appData set to zero.
+   * @param buyAmount The order limit recorded for fee calculation.
    */
-  function commit(bytes32 orderHash) external;
+  function commit(
+    bytes32 orderHash,
+    uint256 buyAmount
+  ) external;
+
+  /// @notice Pays the pending fill fee to the curator escrow at most once.
+  function transferFee() external;
 
   /**
    * @notice The address that can pull funds from the AMM vault to execute an order
@@ -87,24 +123,18 @@ interface IBCoWPool is IERC1271, IBPool {
 
   /**
    * @notice The address of the CoW Protocol settlement contract. It is the
-   * only address that can set commitments.
+   * authorized alongside the configured trampoline to set commitments.
    * @return solutionSettler The address of the solution settler.
    */
   // solhint-disable-next-line style-guide-casing
   function SOLUTION_SETTLER() external view returns (ISettlement solutionSettler);
 
   /**
-   * @notice The identifier describing which `GPv2Order.AppData` currently
-   * apply to this AMM.
-   * @return appData The 32 bytes identifier of the allowed GPv2Order AppData.
-   */
-  // solhint-disable-next-line style-guide-casing
-  function APP_DATA() external view returns (bytes32 appData);
-
-  /**
    * @notice This function checks that the input order is admissible for the
    * constant-product curve for the given trading parameters.
    * @param order `GPv2Order.Data` of a discrete order to be verified.
    */
-  function verify(GPv2Order.Data memory order) external view;
+  function verify(
+    GPv2Order.Data memory order
+  ) external view;
 }
