@@ -106,3 +106,15 @@ jobs:
 
       - name: Run natspec-smells
         run: yarn lint:natspec 2>&1 >/dev/null | grep 'No issues found'
+
+  demo-tests:
+    name: Demo service tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'yarn'
+      - run: yarn --frozen-lockfile --network-concurrency 1
+      - run: yarn test:demo

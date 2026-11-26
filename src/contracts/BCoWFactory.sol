@@ -25,6 +25,9 @@ contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
   /// @notice Immutable module used to create pools in the factory context.
   BCoWPoolDeployer public immutable POOL_DEPLOYER;
 
+  /// @inheritdoc IBCoWFactory
+  mapping(address creator => mapping(bytes32 requestId => address pool)) public createdPool;
+
   /// @notice Balancer DAO multisig authorized to pause deployment.
   address public immutable BDAO_MSIG;
 
@@ -74,6 +77,23 @@ contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
     uint16 feeBps
   ) external whenNotPaused returns (IBPool pool) {
     pool = _createPool(name, symbol, curator, duration, feeBps);
+    _isBPool[address(pool)] = true;
+    emit LOG_NEW_POOL(msg.sender, address(pool));
+    pool.setController(msg.sender);
+  }
+
+  /// @inheritdoc IBCoWFactory
+  function createPool(
+    bytes32 requestId,
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps
+  ) external whenNotPaused returns (IBPool pool) {
+    if (createdPool[msg.sender][requestId] != address(0)) revert CreationRequestAlreadyUsed();
+    pool = _createPool(name, symbol, curator, duration, feeBps);
+    createdPool[msg.sender][requestId] = address(pool);
     _isBPool[address(pool)] = true;
     emit LOG_NEW_POOL(msg.sender, address(pool));
     pool.setController(msg.sender);

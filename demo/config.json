@@ -1,0 +1,20 @@
+{
+  "chainId": 8453,
+  "name": "Base",
+  "rpcUrl": "https://mainnet.base.org",
+  "explorerUrl": "https://basescan.org",
+  "factory": null,
+  "pools": [],
+  "curatedPools": [],
+  "curatorAddress": null,
+  "cowApi": "https://api.cow.fi/base/api/v1",
+  "intervalSeconds": 3600,
+  "orderSeconds": 180,
+  "priceMaxAgeSeconds": 1800,
+  "slippageBps": 50,
+  "curatorFeeBps": 100,
+  "minDriftUsd": "0.10",
+  "limitBufferBps": 10,
+  "maxSizingAttempts": 8,
+  "confirmations": 2
+}
