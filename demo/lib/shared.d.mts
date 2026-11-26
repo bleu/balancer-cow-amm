@@ -4,6 +4,8 @@ export const BONE: bigint;
 export const USD: bigint;
 export const ZERO: "0x0000000000000000000000000000000000000000";
 export const FACTORY_ABI: readonly [
+  "function POOL_SETTINGS_VERSION() view returns(uint256)",
+  "function createPool(bytes32,string,string,address,uint32,uint16,uint256,bool) returns(address)",
   "function createPool(bytes32,string,string,address,uint32,uint16) returns(address)",
   "function createdPool(address,bytes32) view returns(address)",
   "function isBPool(address) view returns(bool)",
@@ -11,6 +13,8 @@ export const FACTORY_ABI: readonly [
   "function HOOKS_TRAMPOLINE() view returns(address)"
 ];
 export const POOL_ABI: readonly [
+  "function solverOrdersEnabled() view returns(bool)",
+  "function setSolverOrdersEnabled(bool)",
   "function name() view returns(string)",
   "function symbol() view returns(string)",
   "function FACTORY() view returns(address)",

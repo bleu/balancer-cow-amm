@@ -2,6 +2,7 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 import { ethers } from "ethers";
+import { Chain } from "../lib/chain.mjs";
 import { manager, provider, load, contract } from "../../script/local/m7.mjs";
 const origin = process.env.DEMO_BROWSER_URL ?? "http://127.0.0.1:3000";
 const config = await (await fetch(origin + "/api/config")).json();
@@ -105,6 +106,8 @@ try {
   await page.locator("#create").click();
   await page.locator("#suggest").click();
   await page.locator("#new-name").fill("Browser MAG7");
+  await page.locator("#public-swap-fee").fill("0.3");
+  await page.locator("#allow-solver-orders").check();
   rejectThirdBind = true;
   await page.locator("#create-confirm").click();
   await page.waitForFunction(
@@ -160,6 +163,38 @@ try {
   await page.reload();
   await page.waitForSelector("#holdings tr");
   assert.equal(await page.locator("#pool-name").textContent(), "Browser MAG7");
+  // Strict curator snapshots must accept a low public fee and keep CoW policy separate.
+  const chain = new Chain({
+    ...config,
+    rpcUrl: provider.connection.url,
+    localAssets: config.assets,
+  });
+  const actual = await chain.snapshot(pending.address);
+  assert.equal(actual.swapFee, ethers.utils.parseUnits("0.3", 16).toString());
+  assert.equal(actual.solverOrdersEnabled, true);
+  assert.equal(actual.feeBps, 100);
+  await page.locator("#connect").click();
+  for (const expected of [false, true]) {
+    await page.locator("#configure-solvers").click();
+    await page.locator("#solver-confirm").click();
+    await page.waitForFunction(
+      () =>
+        document
+          .getElementById("progress")
+          ?.textContent.includes("Solver policy updated."),
+      null,
+      { timeout: 120000 }
+    );
+    assert.equal(
+      (await chain.snapshot(pending.address)).solverOrdersEnabled,
+      expected
+    );
+    assert.equal(
+      (await chain.snapshot(pending.address)).swapFee,
+      actual.swapFee
+    );
+    await page.locator("#close-modal").click();
+  }
   const poolCount = await page.evaluate(
     () =>
       JSON.parse(localStorage.getItem("folio-cow-pools-v1")).filter(
@@ -194,7 +229,7 @@ try {
   await page.screenshot({ path: ".local/demo-desktop.png", fullPage: true });
   assert.deepEqual(errors, []);
   console.log(
-    "Create, interrupted setup recovery, unbind, resume, reload, local-only visibility and responsive layout passed."
+    "Custom fixed public fee, solver opt-in/toggle, deposits/withdrawals, setup recovery and responsive layout passed."
   );
 } finally {
   await browser?.close();

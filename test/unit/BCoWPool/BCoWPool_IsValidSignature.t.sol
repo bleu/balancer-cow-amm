@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {SevenAssetSettlementToken} from '../../integration/SevenAssetCoWSettlement.t.sol';
 import {HooksTrampoline} from '../../vendor/HooksTrampoline.sol';
+import {GPv2Authentication} from '@cowprotocol/interfaces/GPv2Authentication.sol';
 import {IERC20} from '@cowprotocol/interfaces/IERC20.sol';
 import {GPv2Order} from '@cowprotocol/libraries/GPv2Order.sol';
 import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
@@ -39,7 +40,6 @@ contract BCoWPoolIsValidSignature is Test {
       pool.bind(address(token), 1000 * 10 ** decimals[i], weights[i] * 1e18);
       tokens.push(token);
     }
-    pool.setSwapFee(pool.MAX_FEE());
     pool.finalize();
   }
 
@@ -48,10 +48,13 @@ contract BCoWPoolIsValidSignature is Test {
     uint16 bps,
     address curator
   ) internal returns (BCoWPool) {
-    return
-      new BCoWPool(
-        settler, address(trampoline), BCoWPool.Settings(address(this), curator, duration, bps), 'Pool', 'BPT'
-      );
+    return new BCoWPool(
+      settler,
+      address(trampoline),
+      BCoWPool.Settings(address(this), curator, duration, bps, 1e18 - 1e12, false),
+      'Pool',
+      'BPT'
+    );
   }
 
   function _order(
@@ -471,5 +474,180 @@ contract BCoWPoolIsValidSignature is Test {
     escrow.withdraw(address(o.buyToken), address(0x1234));
     assertEq(o.buyToken.balanceOf(address(0x1234)), earned);
     assertEq(escrow.claimable(vm.addr(KEY), address(o.buyToken)), 0);
+  }
+
+  function _enableSolver(
+    address solver_
+  ) internal {
+    address auth = address(0xa071);
+    vm.mockCall(settler, abi.encodeCall(ISettlement.authenticator, ()), abi.encode(auth));
+    vm.mockCall(auth, abi.encodeWithSelector(GPv2Authentication.isSolver.selector), abi.encode(false));
+    vm.mockCall(auth, abi.encodeCall(GPv2Authentication.isSolver, (solver_)), abi.encode(true));
+    pool.setSolverOrdersEnabled(true);
+  }
+
+  function _unsigned(
+    GPv2Order.Data memory o,
+    uint256 epoch
+  ) internal pure returns (bytes memory) {
+    return abi.encode(o, epoch, bytes(''));
+  }
+
+  function test_OnlyCreatorCanControlSolverAccess() public {
+    assertFalse(pool.solverOrdersEnabled());
+    vm.expectRevert(IBCoWPool.OnlyCreator.selector);
+    vm.prank(vm.addr(KEY));
+    pool.setSolverOrdersEnabled(true);
+    vm.expectEmit();
+    emit IBCoWPool.SolverOrdersEnabled(true);
+    pool.setSolverOrdersEnabled(true);
+    assertTrue(pool.solverOrdersEnabled());
+    pool.setSolverOrdersEnabled(false);
+    assertFalse(pool.solverOrdersEnabled());
+  }
+
+  function test_SolverOptInAcceptsUnsignedCurveValidOrderAndPaysSameCuratorFee() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.prank(settler, solver_);
+    assertEq(pool.isValidSignature(hash, sig), bytes4(0x1626ba7e));
+    _fill(o, 0);
+    _pay();
+    assertGt(pool.feeEscrow().claimable(vm.addr(KEY), address(o.buyToken)), 0);
+  }
+
+  function test_DisabledSolverPathDoesNotBlockCurator() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    pool.setSolverOrdersEnabled(false);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.expectRevert(IBCoWPool.SolverOrderNotAuthorized.selector);
+    vm.prank(settler, solver_);
+    pool.isValidSignature(hash, sig);
+    assertEq(_validate(o, 0, KEY), bytes4(0x1626ba7e));
+  }
+
+  function test_SolverPathRequiresSettlementCallerAndAuthorizedOrigin() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.expectRevert(IBCoWPool.SolverOrderNotAuthorized.selector);
+    vm.prank(address(0xbad), solver_);
+    pool.isValidSignature(hash, sig);
+    vm.expectRevert(IBCoWPool.SolverOrderNotAuthorized.selector);
+    vm.prank(settler, address(0xbad));
+    pool.isValidSignature(hash, sig);
+  }
+
+  function test_AuthenticatorRevocationTakesEffectImmediately() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.prank(settler, solver_);
+    assertEq(pool.isValidSignature(hash, sig), bytes4(0x1626ba7e));
+    vm.mockCall(address(0xa071), abi.encodeCall(GPv2Authentication.isSolver, (solver_)), abi.encode(false));
+    vm.expectRevert(IBCoWPool.SolverOrderNotAuthorized.selector);
+    vm.prank(settler, solver_);
+    pool.isValidSignature(hash, sig);
+  }
+
+  function test_SolverCannotBypassCurve() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    o.sellAmount *= 2;
+    o.appData = 0;
+    o.appData = pool.appDataHash(o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR()), o.buyAmount);
+    _commit(o);
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.expectRevert(IBPool.BPool_TokenAmountOutBelowMinOut.selector);
+    vm.prank(settler, solver_);
+    pool.isValidSignature(hash, sig);
+  }
+
+  function test_SolverCannotChangeCanonicalHooks() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    o.appData = bytes32('wrong hooks');
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.expectRevert(IBCoWPool.AppDataDoesNotMatch.selector);
+    vm.prank(settler, solver_);
+    pool.isValidSignature(hash, sig);
+  }
+
+  function test_SolverCannotBypassEpochOrCuratorSignature() public {
+    address solver_ = address(0x501);
+    _enableSolver(solver_);
+    vm.prank(vm.addr(KEY));
+    pool.revoke(1);
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    bytes32 hash = o.hash(pool.SOLUTION_SETTLER_DOMAIN_SEPARATOR());
+    bytes memory sig = _unsigned(o, 0);
+    vm.expectRevert(IBCoWPool.InvalidEpoch.selector);
+    vm.prank(settler, solver_);
+    pool.isValidSignature(hash, sig);
+    sig = _signature(o, 1, KEY + 1);
+    vm.expectRevert(IBCoWPool.InvalidCuratorSignature.selector);
+    vm.prank(settler, solver_);
+    pool.isValidSignature(hash, sig);
+  }
+
+  function test_SolverPolicyCannotChangeDuringCommittedSettlement() public {
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    _commit(o);
+    vm.expectRevert(IBPool.BPool_Reentrancy.selector);
+    pool.setSolverOrdersEnabled(true);
+  }
+
+  function test_CoWFeeCalculationIsIndependentOfPublicSwapFee() public {
+    pool = new BCoWPool(
+      settler,
+      address(trampoline),
+      BCoWPool.Settings(address(this), vm.addr(KEY), 180, 100, 0.003e18, false),
+      'Public',
+      'PUB'
+    );
+    for (uint256 i; i < 2; i++) {
+      uint256 amount = 1000 * 10 ** tokens[i].decimals();
+      tokens[i].mint(address(this), amount);
+      tokens[i].approve(address(pool), amount);
+      pool.bind(address(tokens[i]), amount, (i == 0 ? 8 : 6) * 1e18);
+    }
+    pool.finalize();
+    GPv2Order.Data memory o = _order(0, 1, 100);
+    uint256 baseline = pool.calcInGivenOut(
+      o.buyToken.balanceOf(address(pool)),
+      pool.getDenormalizedWeight(address(o.buyToken)),
+      o.sellToken.balanceOf(address(pool)),
+      pool.getDenormalizedWeight(address(o.sellToken)),
+      o.sellAmount,
+      0
+    );
+    uint256 expected = (o.buyAmount - baseline) * 100 / 10_000;
+    assertGt(expected, 0);
+    assertEq(pool.getSwapFee(), 0.003e18);
+    _commit(o);
+    assertEq(_validate(o, 0, KEY), bytes4(0x1626ba7e));
+    _fill(o, 0);
+    _pay();
+    assertEq(pool.feeEscrow().claimable(vm.addr(KEY), address(o.buyToken)), expected);
   }
 }

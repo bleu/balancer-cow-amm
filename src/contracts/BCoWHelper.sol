@@ -375,8 +375,8 @@ contract BCoWHelper is ICOWAMMPoolHelper, BMath, BCoWConst {
     order_.appData = bytes32(0);
     bytes32 orderCommitment = order_.hash(IBCoWPool(pool).SOLUTION_SETTLER_DOMAIN_SEPARATOR());
     order_.appData = BCoWPool(pool).appDataHash(orderCommitment, order_.buyAmount);
-    // The curator supplies the missing signature off-chain before publication.
-    sig = abi.encodePacked(pool, abi.encode(order_, uint256(0), bytes('')));
+    // The curator signs off-chain, or an opted-in authenticated solver origin uses this unsigned payload.
+    sig = abi.encodePacked(pool, abi.encode(order_, BCoWPool(pool).minEpoch(), bytes('')));
 
     preInteractions = new GPv2Interaction.Data[](1);
     preInteractions[0] = GPv2Interaction.Data({

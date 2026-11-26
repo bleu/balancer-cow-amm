@@ -76,4 +76,48 @@ interface IBCoWFactory is IBFactory {
     uint32 duration,
     uint16 feeBps
   ) external returns (IBPool pool);
+  /// @notice Pool creation settings supported by this factory.
+  /// @return Version 2 supports fixed public fees and optional unsigned solver orders.
+  // solhint-disable-next-line style-guide-casing
+  function POOL_SETTINGS_VERSION() external view returns (uint256);
+
+  /// @notice Creates a pool with independent public swap and CoW settings.
+  /// @param name LP token name.
+  /// @param symbol LP token symbol.
+  /// @param curator Curator signing address.
+  /// @param duration Maximum CoW order duration.
+  /// @param feeBps Curator share of CoW limit surplus.
+  /// @param publicSwapFee Immutable public swap fee scaled by 1e18.
+  /// @param solverOrdersEnabled Initial unsigned solver policy.
+  /// @return pool Created pool controlled by the caller.
+  function newBPool(
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps,
+    uint256 publicSwapFee,
+    bool solverOrdersEnabled
+  ) external returns (IBPool pool);
+
+  /// @notice Creates a recoverable pool with independent public swap and CoW settings.
+  /// @param requestId Unique browser creation request ID.
+  /// @param name LP token name.
+  /// @param symbol LP token symbol.
+  /// @param curator Curator signing address.
+  /// @param duration Maximum CoW order duration.
+  /// @param feeBps Curator share of CoW limit surplus.
+  /// @param publicSwapFee Immutable public swap fee scaled by 1e18.
+  /// @param solverOrdersEnabled Initial unsigned solver policy.
+  /// @return pool Created pool controlled by the caller.
+  function createPool(
+    bytes32 requestId,
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps,
+    uint256 publicSwapFee,
+    bool solverOrdersEnabled
+  ) external returns (IBPool pool);
 }

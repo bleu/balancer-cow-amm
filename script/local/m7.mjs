@@ -102,7 +102,6 @@ async function deployM7() {
     tokens.push({ symbol: symbols[index], address: token.address, decimals: decimals[index], weight: weights[index] });
   }
   const protectiveFee = await pool.MAX_FEE();
-  await (await pool.setSwapFee(protectiveFee)).wait();
   assert.ok((await pool.getSwapFee()).eq(protectiveFee), 'Protective fee missing before finalization');
   await (await pool.finalize()).wait();
   assert.ok(await pool.isFinalized(), 'Pool was not finalized');

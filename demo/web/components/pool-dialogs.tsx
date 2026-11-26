@@ -113,6 +113,8 @@ export function CreateForm({
     [curator, setCurator] = useState<string>(
       config.curatorAddress ?? initialCurator
     ),
+    [publicFee, setPublicFee] = useState("99.9999"),
+    [solverEnabled, setSolverEnabled] = useState(false),
     [usd, setUsd] = useState("1000"),
     [seeds, setSeeds] = useState(config.assets.map(() => "0")),
     [done, setDone] = useState(false),
@@ -148,6 +150,10 @@ export function CreateForm({
     if (!draft.current) {
       if (!config.factory)
         throw Error("Deploy and configure the demo factory first");
+      const fee = units(publicFee, 16);
+      if (fee < 1000000000000n || fee > 999999000000000000n)
+        throw Error("Public fee must be between 0.0001% and 99.9999%");
+      await w.validateTradingOptions(fee, solverEnabled);
       const amounts = config.assets.map((a, i) => units(seeds[i], a.decimals));
       if (amounts.some((n) => n < 1000000n))
         throw Error(
@@ -176,6 +182,8 @@ export function CreateForm({
         symbol: symbol.trim(),
         curator: address,
         feeBps: config.curatorFeeBps,
+        publicSwapFee: fee.toString(),
+        solverOrdersEnabled: solverEnabled,
         seedAmounts: amounts.map(String),
       };
       savePool(draft.current);
@@ -220,6 +228,35 @@ export function CreateForm({
           value={curator}
           onChange={(e) => setCurator(e.target.value)}
         />
+        <label htmlFor="public-swap-fee">Public swap fee (%)</label>
+        <input
+          id="public-swap-fee"
+          inputMode="decimal"
+          value={publicFee}
+          onChange={(e) => setPublicFee(e.target.value)}
+        />
+        <p className="note mt-2">
+          Fixed when the pool is deployed. Lower fees permit ordinary public
+          trading; 99.9999% is the protective setting. This fee does not apply
+          to CoW orders.
+        </p>
+        <label className="flex items-start gap-3">
+          <input
+            id="allow-solver-orders"
+            type="checkbox"
+            className="mt-1 w-auto"
+            checked={solverEnabled}
+            onChange={(e) => setSolverEnabled(e.target.checked)}
+          />
+          <span>
+            Allow CoW solver orders
+            <small>
+              Eligible solver origins can trade without a curator signature,
+              using the same curve and CoW fee checks. The creator can change
+              this permission later.
+            </small>
+          </span>
+        </label>
         <label htmlFor="seed-usd">Suggest seed amounts from USD value</label>
         <div className="flex gap-3">
           <input
@@ -619,6 +656,49 @@ export function CuratorForm({
         }
       >
         Replace curator
+      </button>
+    </>
+  );
+}
+
+export function SolverPolicyForm({
+  pool,
+  ensure,
+  complete,
+}: Pick<Shared, "ensure" | "complete"> & { pool: PoolSnapshot }) {
+  const { busy, run, progress } = useTools();
+  const [done, setDone] = useState(false);
+  const enabled = !pool.solverOrdersEnabled;
+  return (
+    <>
+      <p className="note">
+        {enabled ? "Enable" : "Disable"} unsigned orders from CoW-authenticated
+        transaction origins. Curator signatures, public swap fees and the CoW
+        curve/fee rules are independent. Contract-based solvers whose origin is
+        not whitelisted are not covered by this mode.
+      </p>
+      <button
+        id="solver-confirm"
+        className="button primary mt-5 w-full"
+        disabled={busy || done}
+        onClick={() =>
+          run(async () => {
+            const w = await ensure();
+            await w.send(
+              pool.address,
+              poolAbi,
+              "setSolverOrdersEnabled",
+              [enabled],
+              enabled ? "Enable solver orders" : "Disable solver orders",
+              progress
+            );
+            setDone(true);
+            progress("Solver policy updated.");
+            await complete();
+          })
+        }
+      >
+        {enabled ? "Enable" : "Disable"} solver orders
       </button>
     </>
   );

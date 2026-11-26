@@ -84,6 +84,28 @@ export class PoolActions {
     if (receipt.status !== "success") throw Error(label + " reverted");
     return receipt;
   }
+  async supportsTradingOptions() {
+    if (!this.config.factory) return false;
+    try {
+      return (
+        (await this.publicClient.readContract({
+          address: this.config.factory,
+          abi: factoryAbi,
+          functionName: "POOL_SETTINGS_VERSION",
+        })) >= 2n
+      );
+    } catch {
+      return false;
+    }
+  }
+  async validateTradingOptions(fee: bigint, solverEnabled: boolean) {
+    const modern = await this.supportsTradingOptions();
+    if (!modern && (fee !== 999999000000000000n || solverEnabled))
+      throw Error(
+        "This factory predates custom fees and solver access. Configure the new factory version to use these options."
+      );
+    return modern;
+  }
   async initialize(draft: Draft, progress: Progress) {
     const p = this.publicClient,
       c = this.config;
@@ -91,6 +113,11 @@ export class PoolActions {
       throw Error("Connect the creator wallet to resume");
     if (draft.factory.toLowerCase() !== c.factory?.toLowerCase())
       throw Error("This setup belongs to a different factory");
+    const publicFee = BigInt(draft.publicSwapFee ?? "999999000000000000");
+    const modern = await this.validateTradingOptions(
+      publicFee,
+      draft.solverOrdersEnabled ?? false
+    );
     let address = await p.readContract({
       address: draft.factory,
       abi: factoryAbi,
@@ -109,6 +136,7 @@ export class PoolActions {
           draft.curator,
           180,
           draft.feeBps ?? c.curatorFeeBps,
+          ...(modern ? [publicFee, draft.solverOrdersEnabled ?? false] : []),
         ],
         "Create pool",
         progress
@@ -222,16 +250,18 @@ export class PoolActions {
           })) !== BigInt(draft.seedAmounts[i])
         )
           throw Error("Bound seed amount differs from saved setup");
-      const max = await read("MAX_FEE");
-      if ((await read("getSwapFee")) !== max)
+      if ((await read("getSwapFee")) !== publicFee) {
+        if (modern)
+          throw Error("Fixed public swap fee differs from saved setup");
         await this.send(
           address,
           poolAbi,
           "setSwapFee",
-          [max],
+          [publicFee],
           "Set protective swap fee",
           progress
         );
+      }
       await this.send(
         address,
         poolAbi,

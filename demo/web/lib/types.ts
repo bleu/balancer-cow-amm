@@ -25,6 +25,8 @@ export interface SavedPool {
   curator?: Address;
   feeBps?: number;
   seedAmounts?: string[];
+  publicSwapFee?: string;
+  solverOrdersEnabled?: boolean;
 }
 export interface Draft extends SavedPool {
   requestId: Hex;
@@ -71,6 +73,7 @@ export interface PoolSnapshot {
   duration: number;
   feeBps: number;
   swapFee: string;
+  solverOrdersEnabled: boolean | null;
   maxFee: string;
   epoch: string;
   escrow: Address;

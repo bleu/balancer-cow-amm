@@ -16,7 +16,7 @@ The caller becomes the pool's immutable `creator` and its initial liquidity cont
 
 The factory uses an immutable `BCoWPoolDeployer` module because embedding pool creation code in factory runtime exceeds EIP-170. The module stores STOP-prefixed bytecode fragments in two immutable data contracts. Its only deploy entry point requires execution in the creating factory's context. The factory delegatecalls it, so CREATE still makes the factory the pool's deployer and initial controller. Constructor errors propagate without wrapping. This adds no admin, upgrade mechanism or storage writes in the module.
 
-Pool math and the protective direct-swap fee are unchanged. Keep `MAX_FEE` configured before finalizing a protected pool. `BCoWHelper` keeps its quote calculations and pair APIs; its return metadata now describes canonical fill-or-kill orders and both hooks. Its signature return contains an empty curator signature and cannot authorize a settlement. It is a curator quote tool; old solver-side JIT integration is no longer supported.
+Pool math is unchanged. Public swap fees are now chosen at deployment and cannot be edited, including before finalization. Legacy factory overloads choose protective `MAX_FEE`; extended overloads accept a lower public fee and an initial solver policy. `BCoWHelper` keeps its quote/pair APIs and returns canonical fill-or-kill orders with both hooks, the current epoch and an empty curator signature. The curator signs it off-chain, or an eligible opted-in solver uses the unsigned payload in settlement. See [creator trading options](creator-trading-options.md) for exact authorization and compatibility rules.
 
 ## Signing and posting
 

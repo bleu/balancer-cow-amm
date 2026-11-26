@@ -64,7 +64,6 @@ contract B20Probe {
       require(IERC20(tokens[i]).approve(address(pool), type(uint256).max), 'approval');
       pool.bind(tokens[i], 2e8, weights[i] * 1e18);
     }
-    pool.setSwapFee(pool.MAX_FEE());
     pool.finalize();
     for (uint256 i; i < 7; ++i) {
       require(

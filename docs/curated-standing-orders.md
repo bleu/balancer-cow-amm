@@ -48,7 +48,7 @@ CoW's built-in CoW AMM support doesn't cover multi-token pools such as M7 either
 | --- | --- |
 | Curator | Trusted address, set by the pool creator, who can replace it. Signs orders off-chain, posts them to the order book, earns the fee. |
 | `commit(h0, buyAmount)` pre-hook | Ties the settlement to one order. Records the order's limit and the pool's pre-trade balances. |
-| `isValidSignature` | Accepts only the committed order, with its derived appData and a valid curator signature. Still runs `verify`. |
+| `isValidSignature` | Accepts only the committed order, with its derived appData and either a valid curator signature or the opted-in authenticated solver execution context. Still runs `verify`. |
 | `transferFee()` post-hook | Measures the trade from the pool's balance changes and pays the fee to escrow in the same transaction. |
 | Escrow | A separate contract that holds earned fees until the curator withdraws them. |
 
@@ -259,3 +259,7 @@ Resolved:
 - [HooksTrampoline.sol](https://github.com/cowprotocol/hooks-trampoline/blob/main/src/HooksTrampoline.sol), for settlement-only calls and ignored hook failures
 - [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271)
 - CoW services: `crates/shared/src/order_validation.rs` for hook conversion and the creation-time signature check, and `crates/autopilot/src/solvable_orders.rs` for skipped ERC-1271 re-validation and CoW AMM indexing
+
+## Creator trading options revision
+
+[Creator trading options](creator-trading-options.md) extends this design with a public swap fee fixed at deployment and creator-controlled unsigned solver opt-in. Public fees and CoW fees remain independent. The extended factory exposes settings version 2; legacy overloads default to the protective public fee and solver access off. New bytecode requires a new deployment. User joins/exits remain proportional constituent-token operations.

@@ -58,6 +58,7 @@ abstract contract SevenAssetSettlementChecks is Test {
   uint256 internal supplyBefore;
   uint256 internal lpSharesBefore;
   uint256 internal quoteMode;
+  bool internal unsignedPoolOrder;
 
   struct Batch {
     GPv2Order.Data order;
@@ -93,7 +94,6 @@ abstract contract SevenAssetSettlementChecks is Test {
       prices.push(1e18 * 10 ** (18 - decimals[i]));
       balancesBefore.push(balance);
     }
-    pool.setSwapFee(pool.MAX_FEE());
     assertEq(pool.getSwapFee(), pool.MAX_FEE());
     pool.finalize();
     assertTrue(pool.isFinalized());
@@ -153,6 +153,39 @@ abstract contract SevenAssetSettlementChecks is Test {
     _executeAndVerify(false, solver);
   }
 
+  function test_OptedInSolverSettlesWithoutCuratorSignature() public {
+    pool.setSolverOrdersEnabled(true);
+    unsignedPoolOrder = true;
+    prices[0] = prices[0] * 11 / 10;
+    _executeAndVerify(true, solver);
+  }
+
+  function test_UnsignedSolverStillRequiresCommitment() public {
+    pool.setSolverOrdersEnabled(true);
+    unsignedPoolOrder = true;
+    prices[0] = prices[0] * 11 / 10;
+    _executeAndVerify(false, solver);
+  }
+
+  function test_UnsignedSettlementFailsWithoutCreatorOptIn() public {
+    unsignedPoolOrder = true;
+    prices[0] = prices[0] * 11 / 10;
+    Batch memory batch = _prepareBatch(true);
+    vm.expectRevert(IBCoWPool.SolverOrderNotAuthorized.selector);
+    vm.prank(solver, solver);
+    settlement.settle(tokens, batch.clearingPrices, batch.trades, batch.interactions);
+  }
+
+  function test_UnsignedSettlementRejectsUnregisteredTransactionOrigin() public {
+    pool.setSolverOrdersEnabled(true);
+    unsignedPoolOrder = true;
+    prices[0] = prices[0] * 11 / 10;
+    Batch memory batch = _prepareBatch(true);
+    vm.expectRevert(IBCoWPool.SolverOrderNotAuthorized.selector);
+    vm.prank(solver, address(0xbad));
+    settlement.settle(tokens, batch.clearingPrices, batch.trades, batch.interactions);
+  }
+
   function _executeAndVerify(
     bool includeCommitment,
     address sender
@@ -161,7 +194,7 @@ abstract contract SevenAssetSettlementChecks is Test {
     uint256 invariantBefore = _pairInvariant(batch.sellIndex, batch.buyIndex);
     if (sender != solver) vm.expectRevert(bytes('GPv2: not a solver'));
     else if (!includeCommitment) vm.expectRevert(IBCoWPool.OrderDoesNotMatchCommitmentHash.selector);
-    vm.prank(sender);
+    vm.prank(sender, sender);
     settlement.settle(tokens, batch.clearingPrices, batch.trades, batch.interactions);
     if (sender != solver || !includeCommitment) return;
 
@@ -197,7 +230,9 @@ abstract contract SevenAssetSettlementChecks is Test {
     }
     bytes32 hash = batch.order.hash(settlement.domainSeparator());
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(CURATOR_KEY, pool.curatorDigest(hash, 0));
-    poolSig = abi.encodePacked(address(pool), abi.encode(batch.order, uint256(0), abi.encodePacked(r, s, v)));
+    poolSig = abi.encodePacked(
+      address(pool), abi.encode(batch.order, uint256(0), unsignedPoolOrder ? bytes('') : abi.encodePacked(r, s, v))
+    );
     pre = _wrap(pre, 100_000);
     pool.verify(batch.order);
     (batch.sellIndex, batch.buyIndex) = _indices(batch.order);

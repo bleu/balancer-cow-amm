@@ -24,13 +24,14 @@ import {
   LiquidityForm,
   RecoverForm,
   CuratorForm,
+  SolverPolicyForm,
 } from "./pool-dialogs";
 type Modal =
   | { kind: "create"; curator: Address }
   | { kind: "import" }
   | { kind: "initialize"; draft: Draft }
   | {
-      kind: "deposit" | "withdraw" | "recover" | "curator";
+      kind: "deposit" | "withdraw" | "recover" | "curator" | "solver";
       pool: PoolSnapshot;
     };
 function useCatalog() {
@@ -164,6 +165,15 @@ export function Demo({ config }: { config: DemoConfig }) {
       title = "Recover unfinalized seed assets";
       dialog = (
         <RecoverForm
+          pool={modal.pool}
+          ensure={wallet.ensure}
+          complete={complete}
+        />
+      );
+    } else if (modal.kind === "solver") {
+      title = "Configure solver orders";
+      dialog = (
+        <SolverPolicyForm
           pool={modal.pool}
           ensure={wallet.ensure}
           complete={complete}
@@ -386,7 +396,7 @@ function Catalog({
           <p className="mt-5 text-sm leading-relaxed text-emerald-100/75">
             Fixed target weights. Proportional deposits.
             <br />
-            One live rebalance order at a time.
+            One curator order at a time.
           </p>
         </div>
         <div>
@@ -525,6 +535,14 @@ function Details({
         .join(" · "),
     ],
     ["LP supply", decimal(pool.supply, 18, 4)],
+    [
+      "Solver orders",
+      pool.solverOrdersEnabled === null
+        ? "Legacy pool"
+        : pool.solverOrdersEnabled
+        ? "Enabled"
+        : "Disabled",
+    ],
     ["Direct swap fee", (Number(pool.swapFee) / 1e16).toFixed(4) + "%"],
     ["State", pool.finalized ? "Finalized" : "Initialization pending"],
   ];
@@ -722,13 +740,26 @@ function Details({
             ))}
           </dl>
           {wallet?.toLowerCase() === pool.creator.toLowerCase() && (
-            <button
-              id="replace-curator"
-              className="text-button mt-6"
-              onClick={() => open({ kind: "curator", pool })}
-            >
-              Replace curator
-            </button>
+            <>
+              {" "}
+              <button
+                id="replace-curator"
+                className="text-button mt-6"
+                onClick={() => open({ kind: "curator", pool })}
+              >
+                Replace curator
+              </button>
+              {pool.solverOrdersEnabled !== null && (
+                <button
+                  id="configure-solvers"
+                  className="text-button mt-4 block"
+                  onClick={() => open({ kind: "solver", pool })}
+                >
+                  {pool.solverOrdersEnabled ? "Disable" : "Enable"} solver
+                  orders
+                </button>
+              )}
+            </>
           )}
         </section>
       </div>

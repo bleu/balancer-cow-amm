@@ -77,7 +77,7 @@ See [the local M7 walkthrough](docs/local-m7.md) for prerequisites, commands, ve
 - Bind tokens one by one by calling `IBPool.bind(token, amount, weight)`
   - The amount represents the initial balance of the token in the pool (pulled from the caller's balance)
   - The weight represents the intended distribution of value between the tokens in the pool
-- For a CoW pool, set the protective direct-swap fee to `MAX_FEE` (99.9999%) with `IBPool.setSwapFee(fee)` and verify it before finalization. The fee cannot be changed afterward. This setting does not charge CoW orders the direct-swap fee.
+- For a CoW pool, choose the public swap fee during creation using the extended factory overload. Legacy overloads default to protective `MAX_FEE` (99.9999%). CoW pool fees are fixed from deployment; `setSwapFee` always reverts. Public fees do not apply to CoW orders. See [creator trading options](docs/creator-trading-options.md) for optional solver access and migration.
 - Finalize the pool by calling `IBPool.finalize()`
 
 # Deployments
