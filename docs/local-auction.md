@@ -12,14 +12,14 @@ Use the dependencies and Foundry prerequisites in [local-m7.md](local-m7.md).
 Start the dedicated chain in one terminal:
 
 ```sh
-npm run local:chain
+pnpm run local:chain
 ```
 
 In another terminal:
 
 ```sh
-npm run test:local:auction
-npm run local:auction:verify
+pnpm run test:local:auction
+pnpm run local:auction:verify
 ```
 
 `local:auction` and `test:local:auction` run the same checked experiment. Each

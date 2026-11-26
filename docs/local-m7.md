@@ -4,24 +4,24 @@ This demonstration deploys CoW settlement from the repository's pinned `@cowprot
 
 ## Run it
 
-Requirements: Node 20+, npm, and Foundry (`forge` and `anvil`) on your PATH. Node 22.14.0 and Forge 1.4.4 were used for validation.
+Requirements: Node 22.9+, pnpm 10, and Foundry (`forge` and `anvil`) on your PATH. Node 22.14.0 and Forge 1.4.4 were used for validation.
 
 Install the locked dependencies:
 
 ```sh
-npx --yes yarn@1.22.22 install --frozen-lockfile --ignore-scripts
+pnpm install --frozen-lockfile
 ```
 
 Start the chain in one terminal:
 
 ```sh
-npm run local:chain
+pnpm run local:chain
 ```
 
 In another terminal, deploy and execute the demonstration:
 
 ```sh
-npm run local:demo
+pnpm run local:demo
 ```
 
 The demo uses RPC `http://127.0.0.1:8546` and chain ID `31338`, separate from the Folio app's default chain. It uses Anvil's default public test accounts: account 0 manages the deployment and supplies liquidity, account 1 is the registered solver, and account 2 signs the counterparty order. `LOCAL_RPC_URL` can override the RPC address; the chain must still have ID 31338 and the default test accounts must be funded.
@@ -29,9 +29,9 @@ The demo uses RPC `http://127.0.0.1:8546` and chain ID `31338`, separate from th
 The commands can also be run separately:
 
 ```sh
-npm run local:deploy
-npm run local:settle
-npm run local:verify
+pnpm run local:deploy
+pnpm run local:settle
+pnpm run local:verify
 ```
 
 `local:verify` independently reads the chain and checks the last recorded settlement. You can repeat `local:settle` to execute another pairwise trade at the same reference prices. This is not a promise that every repeat has a trade available: the helper returns no order once there is no candidate with positive calculated opportunity.
@@ -87,7 +87,7 @@ For the independent invariant calculation, token balances are normalized to micr
 Run the tests with fresh locally deployed CoW contracts, without running Anvil or setting an RPC:
 
 ```sh
-npm run test:local:settlement
+pnpm run test:local:settlement
 ```
 
 The local suite reuses the fork suite's balance, share, invariant, solver-authorization, and commitment checks. It also checks that an unauthorized account cannot register a solver. Cases include both a 10% price move and a fivefold price move with a bounded helper candidate.
@@ -95,7 +95,7 @@ The local suite reuses the fork suite's balance, share, invariant, solver-author
 Run the existing unit tests:
 
 ```sh
-npm run test:unit
+pnpm run test:unit
 ```
 
 The existing fork integration suite remains available separately and requires an archive-capable `MAINNET_RPC`.
@@ -144,7 +144,7 @@ await helper['orderFromBuyAmount(address,address,address,uint256)'](
 With Anvil running, execute a fresh deterministic scenario:
 
 ```sh
-npm run test:local:rebalance
+pnpm run test:local:rebalance
 ```
 
 This deploys a fresh pool, applies fixed synthetic price multipliers
@@ -165,7 +165,7 @@ claimed. The scenario uses a funded counterparty and supplied prices, as the
 single-settlement demo does; it does not establish solver competition or LVR
 protection.
 
-To rebalance an existing local deployment instead, run `npm run local:rebalance`.
+To rebalance an existing local deployment instead, run `pnpm run local:rebalance`.
 This command uses the same fixed price scenario and bounds but does not assert
 a minimum number of trades: an already balanced pool may stop immediately.
 The deployment manifest records prices, initial/final drift, tolerance,
@@ -188,8 +188,8 @@ With Anvil running, verify deposits, settlement, withdrawals, and subsequent
 settlement on a fresh pool:
 
 ```sh
-npm run test:local:protection
-npm run local:verify
+pnpm run test:local:protection
+pnpm run local:verify
 ```
 
 The first command deposits and withdraws 10% of the LP share supply, executes a

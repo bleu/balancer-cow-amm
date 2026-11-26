@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: pnpm/action-setup@v4
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1.2.0
         with:
@@ -25,18 +27,18 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20.x
-          cache: 'yarn'
+          node-version: 22.x
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile --network-concurrency 1
+        run: pnpm install --frozen-lockfile
 
       - name: Precompile contracts
-        run: yarn build
+        run: pnpm build
 
       - name: Run tests
         shell: bash
-        run: yarn test:unit
+        run: pnpm test:unit
 
   integration-tests:
     name: Run Integration Tests
@@ -44,6 +46,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: pnpm/action-setup@v4
+
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1.2.0
         with:
@@ -52,17 +56,17 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20.x
-          cache: 'yarn'
+          node-version: 22.x
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile --network-concurrency 1
+        run: pnpm install --frozen-lockfile
 
       - name: Precompile contracts
-        run: yarn build
+        run: pnpm build
 
       - name: Run tests
-        run: yarn test:integration
+        run: pnpm test:integration
 
       - name: Ensure gas snapshots were updated
         run: git diff --exit-code -- .forge-snapshots/
@@ -74,6 +78,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - uses: pnpm/action-setup@v4
+
       - uses: wagoid/commitlint-github-action@v5
 
       - name: Install Foundry
@@ -84,8 +90,8 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 20.x
-          cache: 'yarn'
+          node-version: 22.x
+          cache: 'pnpm'
 
       - name: Install bulloak 
         uses: baptiste0928/cargo-install@v3
@@ -93,28 +99,30 @@ jobs:
           crate: bulloak
 
       - name: Install dependencies
-        run: yarn --frozen-lockfile --network-concurrency 1
+        run: pnpm install --frozen-lockfile
 
       - name: Run forge-fmt && solhint
-        run: yarn lint:check
+        run: pnpm lint:check
 
       - name: Run bulloak check
-        run: yarn lint:bulloak
+        run: pnpm lint:bulloak
 
       - name: Ensure auto-generated smocks are up to date
-        run: yarn smock && git diff --exit-code -- test/smock
+        run: pnpm smock && git diff --exit-code -- test/smock
 
       - name: Run natspec-smells
-        run: yarn lint:natspec 2>&1 >/dev/null | grep 'No issues found'
+        run: pnpm lint:natspec 2>&1 >/dev/null | grep 'No issues found'
 
   demo-tests:
     name: Demo service tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v3
         with:
           node-version: 22.x
-          cache: 'yarn'
-      - run: yarn --frozen-lockfile --network-concurrency 1
-      - run: yarn test:demo
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:demo

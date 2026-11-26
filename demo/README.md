@@ -6,28 +6,32 @@ The frontend creates and resumes pools, recovers abandoned seed assets, imports 
 
 ## Local demo
 
-Requires Node **22+**, Yarn 1, Foundry and the repository dependencies.
+Requires Node **22.9+**, pnpm 10, Foundry and the repository dependencies.
 
 ```sh
-yarn install --frozen-lockfile
-yarn local:chain
+asdf install                     # selects Node 22.9.0 from .tool-versions
+node --version                   # must be v22.9.0 or newer
+corepack enable                  # enables the pinned pnpm version
+pnpm install --frozen-lockfile
+pnpm prepare                     # installs Git hooks explicitly
+pnpm local:chain
 ```
 
 In another terminal:
 
 ```sh
-yarn demo:local:deploy
-DEMO_CONFIG=.local/demo-config.json yarn demo:serve
+pnpm demo:local:deploy
+DEMO_CONFIG=.local/demo-config.json pnpm demo:serve
 ```
 
 Open <http://127.0.0.1:3000>. This explicitly labeled Anvil fixture uses synthetic prices and test stocks with mixed decimals. Import an Anvil test account into a development wallet, use chain 31338 / RPC <http://127.0.0.1:8546>, and fund its stock balances using `LocalStockToken.mint`. The fixture's manager already has stocks and ETH. Never use those public test keys for Base. `.local/` artifacts are ignored.
 
-The local fixture does not call production CoW for order history and is not enrolled in live curation. The separate existing `yarn test:local:settlement` exercises real pinned settlement bytecode locally.
+The local fixture does not call production CoW for order history and is not enrolled in live curation. The separate existing `pnpm test:local:settlement` exercises real pinned settlement bytecode locally.
 
 ## Configure Base
 
-1. Copy `demo/config.json` to a local configuration file. Set `DEMO_CONFIG` to its path. Configure `BASE_RPC_URL` (a Base RPC supporting ordinary reads and simulations) in server environment variables. Copy `.env.example` for optional settings. Node loads `.env` through `yarn demo:serve`; it is never served to the browser.
-2. Deploy the **new** factory version supporting request IDs. `DEPLOYER_ADDRESS=0x... yarn demo:deploy:base` outputs an unsigned deployment transaction. Inspect that transaction and its admin/production settlement/trampoline addresses. Only an explicit `yarn demo:deploy:base --broadcast`, with `DEPLOYER_PRIVATE_KEY`, submits it. The deployer needs Base ETH. `FACTORY_ADMIN` defaults to the deployer. Deployment writes a public receipt to `.local/base-factory.json`.
+1. Copy `demo/config.json` to a local configuration file. Set `DEMO_CONFIG` to its path. Configure `BASE_RPC_URL` (a Base RPC supporting ordinary reads and simulations) in server environment variables. Copy `.env.example` for optional settings. Node loads `.env` through `pnpm demo:serve`; it is never served to the browser.
+2. Deploy the **new** factory version supporting request IDs. `DEPLOYER_ADDRESS=0x... pnpm demo:deploy:base` outputs an unsigned deployment transaction. Inspect that transaction and its admin/production settlement/trampoline addresses. Only an explicit `pnpm demo:deploy:base --broadcast`, with `DEPLOYER_PRIVATE_KEY`, submits it. The deployer needs Base ETH. `FACTORY_ADMIN` defaults to the deployer. Deployment writes a public receipt to `.local/base-factory.json`.
 3. Set `factory` and the server curator's **public** `curatorAddress` in your config. Start the app with `CURATOR_LIVE=false`. Use the creation flow to seed/finalize a MAG7 pool from a wallet holding all seven native B20 assets. The preset uses Folio weights: 20/15/15/15/15/10/10. Finalized pools use a protective `MAX_FEE` for direct swaps. Initial LP supply is the contract's fixed 100 shares; the USD seed helper only suggests constituent amounts.
 4. Inspect the pool's finalized state, assets, weights, curator, order duration, relayer allowances and intended seed allocation. Add its address explicitly to **both** `pools` and `curatedPools`, then restart. `pools` publishes the catalog; `curatedPools` enables evaluation. Production config rejects public entries missing from the watchlist. An on-chain curator address alone never enrolls a pool. A user's creation is stored only in their browser until this operator action.
 5. Put `CURATOR_PRIVATE_KEY` in the service environment; it must match `curatorAddress`. Run one process per signing key/watchlist. With `CURATOR_LIVE=false`, the service prepares and verifies candidates but never signs or posts them. After reviewing real token behavior and executable hook-aware quotes, set `CURATOR_LIVE=true` to enable order submission. The key needs no user seed assets and is never sent to the client.
@@ -53,17 +57,17 @@ The HTTP service binds to `127.0.0.1` by default. Put a public deployment behind
 ## Validation
 
 ```sh
-yarn test:demo                     # deterministic service/math/signing/security tests
-yarn test:demo:local               # requires the deployed Anvil fixture; real pool curve + quote stub
-yarn test:local:settlement         # pinned CoW settlement, seven-asset pool
+pnpm test:demo                     # deterministic service/math/signing/security tests
+pnpm test:demo:local               # requires the deployed Anvil fixture; real pool curve + quote stub
+pnpm test:local:settlement         # pinned CoW settlement, seven-asset pool
 
 # With the local server running; browser binaries installed once:
-yarn playwright install chromium
-DEMO_BROWSER_URL=http://127.0.0.1:3000 yarn test:demo:browser
+pnpm playwright install chromium
+DEMO_BROWSER_URL=http://127.0.0.1:3000 pnpm test:demo:browser
 # Or set BROWSER_EXECUTABLE to a local Chromium/Chrome executable.
 
 # Read-only Base simulation; RPC must support eth_call state overrides:
-yarn demo:probe:b20
+pnpm demo:probe:b20
 ```
 
 The browser journey mints **local** stocks, deposits, withdraws, creates/finalizes a pool, reloads it, verifies a second browser cannot discover it, and checks mobile overflow. It refuses any network/configuration other than the explicit local fixture. Screenshots go to `.local/demo-desktop.png` and `.local/demo-mobile.png`.
