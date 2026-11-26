@@ -15,7 +15,7 @@ await fs.writeFile(
   new URL("../.local/demo.env", import.meta.url),
   serializeEnv(env)
 );
-console.log("Start: pnpm demo:serve:local");
+console.log("Start: pnpm dev:local");
 console.log(
   "Synthetic fixture only. Fund another local wallet with LocalStockToken.mint to exercise deposits."
 );

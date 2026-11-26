@@ -8,7 +8,7 @@ The frontend creates and resumes pools, recovers abandoned seed assets, imports 
 
 The frontend lives in `demo/web`: Next.js App Router, React, strict TypeScript and Tailwind CSS. Wagmi manages injected-wallet connections and account/network changes; viem reads, simulates, estimates and submits contract transactions. TanStack Query caches and refreshes API reads. Shared basket math and ABI definitions live in `demo/lib/shared.mjs` with TypeScript declarations.
 
-`pnpm demo:serve` (Base) and `pnpm demo:serve:local` (Anvil) run the Next development server with live reload. A single Node process serves Next pages, the existing read-only `/api/*` routes and the curator loop. Wallet transactions go through the injected wallet. Next builds do not start the curator or contact RPC/price services, and no signing key or RPC credential is bundled into the frontend.
+`pnpm dev` (Base) and `pnpm dev:local` (Anvil) run the Next development server with live reload. A single Node process serves Next pages, the existing read-only `/api/*` routes and the curator loop. Wallet transactions go through the injected wallet. Next builds do not start the curator or contact RPC/price services, and no signing key or RPC credential is bundled into the frontend.
 
 For production:
 
@@ -37,7 +37,7 @@ In another terminal:
 
 ```sh
 pnpm demo:local:deploy
-pnpm demo:serve:local
+pnpm dev:local
 ```
 
 Open <http://127.0.0.1:3000>. This explicitly labeled Anvil fixture uses synthetic prices and test stocks with mixed decimals. Import an Anvil test account into a development wallet, use chain 31338 / RPC <http://127.0.0.1:8546>, and fund its stock balances using `LocalStockToken.mint`. The fixture's manager already has stocks and ETH. Never use those public test keys for Base. `.local/` artifacts are ignored.
@@ -46,7 +46,7 @@ The local fixture does not call production CoW for order history and is not enro
 
 ## Configure Base
 
-1. Copy `.env.example` to `.env` and set the demo environment variables there (or inject them through your host). Configure `BASE_RPC_URL` for a Base RPC supporting ordinary reads and simulations. `pnpm demo:serve` loads `.env`; no JSON configuration file is used or served to the browser.
+1. Copy `.env.example` to `.env` and set the demo environment variables there (or inject them through your host). Configure `BASE_RPC_URL` for a Base RPC supporting ordinary reads and simulations. `pnpm dev` loads `.env`; no JSON configuration file is used or served to the browser.
 2. Deploy the **new** factory version supporting request IDs. `DEPLOYER_ADDRESS=0x... pnpm demo:deploy:base` outputs an unsigned deployment transaction. Inspect that transaction and its admin/production settlement/trampoline addresses. Only an explicit `pnpm demo:deploy:base --broadcast`, with `DEPLOYER_PRIVATE_KEY`, submits it. The deployer needs Base ETH. `FACTORY_ADMIN` defaults to the deployer. Deployment writes a public receipt to `.local/base-factory.json`.
 3. Set `DEMO_FACTORY_ADDRESS` and the server curator's **public** `CURATOR_ADDRESS` in `.env`. Start the app with `CURATOR_LIVE=false`. Use the creation flow to seed/finalize a MAG7 pool from a wallet holding all seven native B20 assets. The preset uses Folio weights: 20/15/15/15/15/10/10. Finalized pools use a protective `MAX_FEE` for direct swaps. Initial LP supply is the contract's fixed 100 shares; the USD seed helper only suggests constituent amounts.
 4. Inspect the pool's finalized state, assets, weights, curator, order duration, relayer allowances and intended seed allocation. Add its address explicitly to **both** `DEMO_POOLS` and `CURATOR_POOLS`, then restart. `DEMO_POOLS` publishes the catalog; `CURATOR_POOLS` enables evaluation. Production config rejects public entries missing from the watchlist. An on-chain curator address alone never enrolls a pool. A user's creation is stored only in their browser until this operator action.
@@ -67,7 +67,7 @@ DEMO_POOLS='[{"address":"0xYourPool","name":"MAG7"}]'
 CURATOR_POOLS='[{"address":"0xYourPool"}]'
 ```
 
-The local deploy script generates `.local/demo.env` with public fixture addresses, `DEMO_LOCAL_ASSETS` and `DEMO_FIXTURE_PRICES`. `pnpm demo:serve:local` loads that file directly, so copying it over your Base `.env` is unnecessary. Synthetic assets/prices are only accepted with `DEMO_LOCAL_DEV=true` and a local chain ID; live posting is refused in that mode. Runtime environment variables take precedence over values loaded from env files. Never export production curator variables into a local fixture process.
+The local deploy script generates `.local/demo.env` with public fixture addresses, `DEMO_LOCAL_ASSETS` and `DEMO_FIXTURE_PRICES`. `pnpm dev:local` loads that file directly, so copying it over your Base `.env` is unnecessary. Synthetic assets/prices are only accepted with `DEMO_LOCAL_DEV=true` and a local chain ID; live posting is refused in that mode. Runtime environment variables take precedence over values loaded from env files. Never export production curator variables into a local fixture process.
 
 ## Curator operation
 

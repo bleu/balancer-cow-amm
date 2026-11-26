@@ -368,4 +368,4 @@ Automated coverage includes request-ID namespaces/reverts/ownership, portfolio/r
 
 Still required before a funded production demonstration: deploy/configure the factory and seed the public pool; measure cold production hook gas; exercise issuer policy/restriction and share-multiplier changes; obtain verified final canonical quotes and demonstrate small real production order acceptance and settlement. Keep these as explicit launch checks. Local quote stubs and remote state overrides are not evidence of a production fill.
 
-All demo configuration is supplied through environment variables listed in `.env.example`. There is no JSON configuration file or `DEMO_CONFIG` selector. `DEMO_POOLS` and `CURATOR_POOLS` are JSON arrays inside environment values. Local deployment generates `.local/demo.env`, loaded with `pnpm demo:serve:local`.
+All demo configuration is supplied through environment variables listed in `.env.example`. There is no JSON configuration file or `DEMO_CONFIG` selector. `DEMO_POOLS` and `CURATOR_POOLS` are JSON arrays inside environment values. Local deployment generates `.local/demo.env`, loaded with `pnpm dev:local`.
