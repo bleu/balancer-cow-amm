@@ -17,6 +17,9 @@ import {IBPool} from 'interfaces/IBPool.sol';
  */
 contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
   /// @inheritdoc IBCoWFactory
+  uint256 public constant POOL_SETTINGS_VERSION = 2;
+
+  /// @inheritdoc IBCoWFactory
   address public immutable SOLUTION_SETTLER;
 
   /// @inheritdoc IBCoWFactory
@@ -76,7 +79,7 @@ contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
     uint32 duration,
     uint16 feeBps
   ) external whenNotPaused returns (IBPool pool) {
-    pool = _createPool(name, symbol, curator, duration, feeBps);
+    pool = _createPool(name, symbol, curator, duration, feeBps, 1e18 - 1e12, false);
     _isBPool[address(pool)] = true;
     emit LOG_NEW_POOL(msg.sender, address(pool));
     pool.setController(msg.sender);
@@ -92,7 +95,42 @@ contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
     uint16 feeBps
   ) external whenNotPaused returns (IBPool pool) {
     if (createdPool[msg.sender][requestId] != address(0)) revert CreationRequestAlreadyUsed();
-    pool = _createPool(name, symbol, curator, duration, feeBps);
+    pool = _createPool(name, symbol, curator, duration, feeBps, 1e18 - 1e12, false);
+    createdPool[msg.sender][requestId] = address(pool);
+    _isBPool[address(pool)] = true;
+    emit LOG_NEW_POOL(msg.sender, address(pool));
+    pool.setController(msg.sender);
+  }
+
+  /// @inheritdoc IBCoWFactory
+  function newBPool(
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps,
+    uint256 publicSwapFee,
+    bool solverOrdersEnabled
+  ) external whenNotPaused returns (IBPool pool) {
+    pool = _createPool(name, symbol, curator, duration, feeBps, publicSwapFee, solverOrdersEnabled);
+    _isBPool[address(pool)] = true;
+    emit LOG_NEW_POOL(msg.sender, address(pool));
+    pool.setController(msg.sender);
+  }
+
+  /// @inheritdoc IBCoWFactory
+  function createPool(
+    bytes32 requestId,
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps,
+    uint256 publicSwapFee,
+    bool solverOrdersEnabled
+  ) external whenNotPaused returns (IBPool pool) {
+    if (createdPool[msg.sender][requestId] != address(0)) revert CreationRequestAlreadyUsed();
+    pool = _createPool(name, symbol, curator, duration, feeBps, publicSwapFee, solverOrdersEnabled);
     createdPool[msg.sender][requestId] = address(pool);
     _isBPool[address(pool)] = true;
     emit LOG_NEW_POOL(msg.sender, address(pool));
@@ -109,7 +147,7 @@ contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
     string memory name,
     string memory symbol
   ) internal virtual override whenNotPaused returns (IBPool bCoWPool) {
-    bCoWPool = _createPool(name, symbol, msg.sender, 180, 100);
+    bCoWPool = _createPool(name, symbol, msg.sender, 180, 100, 1e18 - 1e12, false);
   }
 
   /// @notice Deploys a curated pool for the current caller.
@@ -118,16 +156,24 @@ contract BCoWFactory is BFactory, IBCoWFactory, Pausable {
   /// @param curator Initial ECDSA signer.
   /// @param duration Maximum future order validity in seconds.
   /// @param feeBps Share of limit surplus in basis points.
+  /// @param publicSwapFee Fixed public swap fee, scaled by 1e18.
+  /// @param solverOrdersEnabled Initial unsigned solver order policy.
   /// @return Newly deployed pool.
   function _createPool(
     string memory name,
     string memory symbol,
     address curator,
     uint32 duration,
-    uint16 feeBps
+    uint16 feeBps,
+    uint256 publicSwapFee,
+    bool solverOrdersEnabled
   ) private returns (IBPool) {
     bytes memory args = abi.encode(
-      SOLUTION_SETTLER, HOOKS_TRAMPOLINE, BCoWPool.Settings(msg.sender, curator, duration, feeBps), name, symbol
+      SOLUTION_SETTLER,
+      HOOKS_TRAMPOLINE,
+      BCoWPool.Settings(msg.sender, curator, duration, feeBps, publicSwapFee, solverOrdersEnabled),
+      name,
+      symbol
     );
     bytes memory result =
       Address.functionDelegateCall(address(POOL_DEPLOYER), abi.encodeCall(BCoWPoolDeployer.deploy, (args)));

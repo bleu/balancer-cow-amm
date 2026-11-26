@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 pragma solidity 0.8.25;
 
+import {GPv2Authentication} from '@cowprotocol/interfaces/GPv2Authentication.sol';
 import {IERC20} from '@cowprotocol/interfaces/IERC20.sol';
 import {GPv2Interaction} from '@cowprotocol/libraries/GPv2Interaction.sol';
 import {GPv2Trade} from '@cowprotocol/libraries/GPv2Trade.sol';
@@ -35,4 +36,7 @@ interface ISettlement {
    * @dev Address that will transfer and transferFrom the pool. Has an infinite allowance.
    */
   function vaultRelayer() external view returns (address vaultRelayer);
+  /// @notice Authenticator defining the current authorized solver set.
+  /// @return Authentication contract used by settlement.
+  function authenticator() external view returns (GPv2Authentication);
 }

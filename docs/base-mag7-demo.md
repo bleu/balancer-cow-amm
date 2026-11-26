@@ -54,7 +54,7 @@ The initial flow offers the MAG7 preset and the fixed Folio weights above. Arbit
 1. Confirm Base network, wallet balances, selected curator address, three-minute order duration and curator fee settings. Expose only the curator's public address to the browser; obtain it from server/application configuration.
 2. Create a pool through the configured factory using a unique client-generated creation request ID and retrieve its address through the direct-read lookup described below. The connected creator wallet remains the initial pool controller and immutable creator.
 3. Approve the new pool to pull the seven seed amounts, then bind each token with its preset weight. Binding transfers the user's seed tokens to the new pool.
-4. Set the protective direct-swap fee to `MAX_FEE` and verify it on-chain.
+4. Verify the public swap fee selected during creation. Version-2 pools fix this fee at deployment; the default is protective `MAX_FEE`.
 5. Finalize after every token, balance and setting is verified. Check relayer allowances, LP supply, initial LP ownership and finalized status by direct reads.
 6. Store the pool in that browser's local catalog and open its detail page. Do not mutate server catalogs or whitelists. Show it as locally saved and not automatically enrolled for rebalancing; public listing requires subsequent explicit curator and frontend registration.
 
@@ -369,3 +369,5 @@ Automated coverage includes request-ID namespaces/reverts/ownership, portfolio/r
 Still required before a funded production demonstration: deploy/configure the factory and seed the public pool; measure cold production hook gas; exercise issuer policy/restriction and share-multiplier changes; obtain verified final canonical quotes and demonstrate small real production order acceptance and settlement. Keep these as explicit launch checks. Local quote stubs and remote state overrides are not evidence of a production fill.
 
 All demo configuration is supplied through environment variables listed in `.env.example`. There is no JSON configuration file or `DEMO_CONFIG` selector. `DEMO_POOLS` and `CURATOR_POOLS` are JSON arrays inside environment values. Local deployment generates `.local/demo.env`, loaded with `pnpm dev:local`.
+
+Creator trading options are described in [the revision](creator-trading-options.md): a deployment-fixed public swap fee and creator-controlled solver opt-in, with independent CoW economics. The demo accepts low-fee MAG7 pools. User entry/exit remains the original all-constituent flow; USDC routing and signature batching are deferred.

@@ -95,6 +95,10 @@ export class Chain {
       p.minEpoch(opt),
       p.feeEscrow(opt),
     ]);
+    // Older deployed factories/pools remain readable; they have no solver-order toggle.
+    const solverOrdersEnabled = await p
+      .solverOrdersEnabled(opt)
+      .catch(() => null);
     const feeContract = new ethers.Contract(escrow, ESCROW_ABI, this.provider);
     await Promise.all(
       tokens.map(async (t) => {
@@ -104,15 +108,8 @@ export class Chain {
       })
     );
     if (strict) {
-      if (
-        !finalized ||
-        tokens.length !== 7 ||
-        duration !== 180 ||
-        !swapFee.eq(maxFee)
-      )
-        throw Error(
-          "Pool is incomplete or does not match protected MAG7 settings"
-        );
+      if (!finalized || tokens.length !== 7 || duration !== 180)
+        throw Error("Pool is incomplete or does not match MAG7 settings");
       for (const t of tokens) {
         const a = preset.find((a) => lower(a.address) === lower(t.address));
         if (
@@ -136,6 +133,7 @@ export class Chain {
       duration,
       feeBps,
       swapFee: swapFee.toString(),
+      solverOrdersEnabled,
       maxFee: maxFee.toString(),
       epoch: epoch.toString(),
       escrow,

@@ -6,6 +6,7 @@ import {BCoWPool} from 'contracts/BCoWPool.sol';
 import {Test} from 'forge-std/Test.sol';
 import {IBCoWFactory} from 'interfaces/IBCoWFactory.sol';
 import {IBCoWPool} from 'interfaces/IBCoWPool.sol';
+import {IBPool} from 'interfaces/IBPool.sol';
 import {ISettlement} from 'interfaces/ISettlement.sol';
 
 contract BCoWFactoryRequestsTest is Test {
@@ -63,5 +64,46 @@ contract BCoWFactoryRequestsTest is Test {
     factory.unpause();
     factory.createPool(id, 'good', 'G', address(this), 180, 100);
     assertNotEq(factory.createdPool(address(this), id), address(0));
+  }
+
+  function test_CustomPublicFeeAndSolverSettingsAreRecoverableAndIndependent() public {
+    bytes32 id = bytes32(uint256(3));
+    address creator_ = address(0xa11ce);
+    vm.prank(creator_);
+    BCoWPool pool =
+      BCoWPool(address(factory.createPool(id, 'Public', 'PUB', address(0xc0ffee), 180, 100, 0.003e18, true)));
+    assertEq(factory.createdPool(creator_, id), address(pool));
+    assertTrue(factory.isBPool(address(pool)));
+    assertEq(pool.creator(), creator_);
+    assertEq(pool.getController(), creator_);
+    assertEq(pool.getSwapFee(), 0.003e18);
+    assertEq(pool.curatorFeeBps(), 100);
+    assertTrue(pool.solverOrdersEnabled());
+    vm.expectRevert(IBCoWPool.PublicSwapFeeIsFixed.selector);
+    vm.prank(creator_);
+    pool.setSwapFee(0.01e18);
+    vm.prank(creator_);
+    pool.setController(address(0xb0b));
+    vm.expectRevert(IBCoWPool.PublicSwapFeeIsFixed.selector);
+    vm.prank(address(0xb0b));
+    pool.setSwapFee(0.01e18);
+    vm.expectRevert(IBCoWPool.OnlyCreator.selector);
+    vm.prank(address(0xb0b));
+    pool.setSolverOrdersEnabled(false);
+    vm.prank(creator_);
+    pool.setSolverOrdersEnabled(false);
+    assertFalse(pool.solverOrdersEnabled());
+  }
+
+  function test_PublicFeeBoundsAndLegacyDefaults() public {
+    vm.expectRevert(IBPool.BPool_FeeBelowMinimum.selector);
+    factory.createPool(bytes32(uint256(1)), 'Bad', 'B', address(this), 180, 100, 1e12 - 1, false);
+    assertEq(factory.createdPool(address(this), bytes32(uint256(1))), address(0));
+    vm.expectRevert(IBPool.BPool_FeeAboveMaximum.selector);
+    factory.newBPool('Bad', 'B', address(this), 180, 100, 1e18, true);
+    BCoWPool pool = BCoWPool(address(factory.newBPool('Legacy', 'L')));
+    assertEq(pool.getSwapFee(), pool.MAX_FEE());
+    assertFalse(pool.solverOrdersEnabled());
+    assertEq(factory.POOL_SETTINGS_VERSION(), 2);
   }
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.25;
 import {BCoWHelperValidationFixture} from './BCoWHelperValidation.t.sol';
 import {BCoWPool} from 'contracts/BCoWPool.sol';
 import {BNum} from 'contracts/BNum.sol';
+import {IBCoWPool} from 'interfaces/IBCoWPool.sol';
 import {IBPool} from 'interfaces/IBPool.sol';
 import {LocalStockToken} from 'script/local/LocalStockToken.sol';
 
@@ -24,7 +25,8 @@ contract BCoWDirectSwapProtectionTest is BCoWHelperValidationFixture {
     bool protected,
     uint256 seed
   ) internal returns (BCoWPool pool) {
-    pool = BCoWPool(address(factory.newBPool('M7', 'M7')));
+    pool =
+      BCoWPool(address(factory.newBPool('M7', 'M7', address(this), 180, 100, protected ? 1e18 - 1e12 : 1e12, false)));
     uint8[7] memory decimals = [uint8(18), 6, 8, 18, 6, 18, 8];
     uint256[7] memory units = [uint256(8), 6, 6, 6, 6, 4, 4];
     for (uint256 i; i < 7; ++i) {
@@ -36,7 +38,6 @@ contract BCoWDirectSwapProtectionTest is BCoWHelperValidationFixture {
       token.approve(address(pool), balance);
       pool.bind(address(token), balance, units[i] * 1e18);
     }
-    if (protected) pool.setSwapFee(pool.MAX_FEE());
     assertEq(pool.getSwapFee(), protected ? pool.MAX_FEE() : pool.MIN_FEE());
     pool.finalize();
     assertEq(pool.getSwapFee(), protected ? pool.MAX_FEE() : pool.MIN_FEE());
@@ -210,7 +211,7 @@ contract BCoWDirectSwapProtectionTest is BCoWHelperValidationFixture {
   function test_ProtectedFeeIsImmutableAndTradeLimitsStillApply() public {
     BCoWPool pool = _portfolio(true, 0);
     uint256 lowFee = pool.MIN_FEE();
-    vm.expectRevert(IBPool.BPool_PoolIsFinalized.selector);
+    vm.expectRevert(IBCoWPool.PublicSwapFeeIsFixed.selector);
     pool.setSwapFee(lowFee);
     address[] memory tokens = pool.getFinalTokens();
     uint256 maxIn = pool.getBalance(tokens[0]) / 2;

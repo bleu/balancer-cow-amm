@@ -49,7 +49,6 @@ abstract contract BCoWHelperValidationFixture is Test {
       created.bind(address(token), balances[i], weights[i]);
     }
     // Deployed CoW pools deter the ordinary swap path with a high fee.
-    created.setSwapFee(helper.MAX_FEE());
     created.finalize();
     pool = BCoWPool(address(created));
   }
@@ -80,6 +79,16 @@ abstract contract BCoWHelperValidationFixture is Test {
 }
 
 contract BCoWHelperValidationTest is BCoWHelperValidationFixture {
+  function test_UnsignedQuoteUsesCurrentEpochAfterRevocation() public {
+    BCoWPool pool = _m7();
+    pool.revoke(7);
+    uint256[] memory prices = _prices(7);
+    prices[0] = 1.1e18;
+    (GPv2Order.Data memory order,,, bytes memory sig) = helper.order(address(pool), prices);
+    assertEq(sig, abi.encodePacked(address(pool), abi.encode(order, uint256(7), bytes(''))));
+    pool.verify(order);
+  }
+
   function test_M7AtEquilibriumHasNoOrder() public {
     BCoWPool pool = _m7();
     uint256[] memory prices = _prices(7);

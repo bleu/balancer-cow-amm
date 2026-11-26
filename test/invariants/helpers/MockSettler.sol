@@ -1,9 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
+import {GPv2Authentication} from '@cowprotocol/interfaces/GPv2Authentication.sol';
 import {GPv2Interaction, GPv2Trade, IERC20, ISettlement} from 'interfaces/ISettlement.sol';
 
 contract MockSettler is ISettlement {
+  function authenticator() external pure returns (GPv2Authentication) {
+    return GPv2Authentication(address(0));
+  }
+
   function domainSeparator() external view override returns (bytes32) {
     return bytes32(hex'1234');
   }

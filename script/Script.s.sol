@@ -57,7 +57,6 @@ contract TestnetScript is BaseScript {
     bPool.bind(_SEPOLIA_USDC_TOKEN, 10e6, 1e18);
 
     uint256 protectiveFee = BPool(address(bPool)).MAX_FEE();
-    bPool.setSwapFee(protectiveFee);
     require(bPool.getSwapFee() == protectiveFee, 'Protective swap fee missing');
     bPool.finalize();
     require(bPool.isFinalized() && bPool.getSwapFee() == protectiveFee, 'Protected finalization failed');

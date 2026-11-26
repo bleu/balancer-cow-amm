@@ -50,7 +50,7 @@ async function setup() {
   const authentication = await contract('GPv2AllowListAuthentication', state.authentication);
   await (await authentication.addSolver(bidderB.address)).wait();
   const factory = await contract('BCoWFactory', state.factory);
-  const receipt = await (await factory['newBPool(string,string)']('Ordinary M7 control', 'M7C')).wait();
+  const receipt = await (await factory['newBPool(string,string,address,uint32,uint16,uint256,bool)']('Ordinary M7 control', 'M7C', manager.address, 180, 100, ordinaryFee.toString(), false)).wait();
   const ordinary = await contract('BCoWPool', receipt.events.find((event) => event.event === 'LOG_NEW_POOL').args.bPool);
   for (let i = 0; i < tokens.length; ++i) {
     const amount = (await tokens[i].balanceOf(state.pool)).toString();
@@ -58,7 +58,6 @@ async function setup() {
     await (await tokens[i].approve(ordinary.address, amount)).wait();
     await (await ordinary.bind(tokens[i].address, amount, ethers.utils.parseEther(String(state.tokens[i].weight)))).wait();
   }
-  await (await ordinary.setSwapFee(ordinaryFee.toString())).wait();
   await (await ordinary.finalize()).wait();
   const venues = [];
   for (const fee of [10, 30, 10, 30, 10]) {

@@ -17,7 +17,7 @@ contract LocalArbitrageTest is BCoWHelperValidationFixture {
   function _setUpArbitrage(
     bool liquid
   ) internal {
-    pool = BCoWPool(address(factory.newBPool('Control', 'C')));
+    pool = BCoWPool(address(factory.newBPool('Control', 'C', address(this), 180, 100, 0.003e18, false)));
     stock = new LocalStockToken('Stock', 'S', 18);
     cash = new LocalStockToken('Cash', 'C', 6);
     stock.mint(address(this), 800e18);
@@ -26,7 +26,6 @@ contract LocalArbitrageTest is BCoWHelperValidationFixture {
     cash.approve(address(pool), 600e6);
     pool.bind(address(stock), 800e18, 8e18);
     pool.bind(address(cash), 600e6, 6e18);
-    pool.setSwapFee(0.003e18);
     pool.finalize();
     venue = new LocalAuctionVenue(10);
     address[] memory tokens = new address[](2);

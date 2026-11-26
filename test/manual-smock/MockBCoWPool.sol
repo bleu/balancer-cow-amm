@@ -43,7 +43,9 @@ contract MockBCoWPool is BCoWPool, Test {
     address cowSolutionSettler,
     string memory name,
     string memory symbol
-  ) BCoWPool(cowSolutionSettler, address(0x1234), Settings(msg.sender, msg.sender, 180, 100), name, symbol) {}
+  )
+    BCoWPool(cowSolutionSettler, address(0x1234), Settings(msg.sender, msg.sender, 180, 100, 1e12, false), name, symbol)
+  {}
 
   function mock_call_commit(
     bytes32 orderHash,

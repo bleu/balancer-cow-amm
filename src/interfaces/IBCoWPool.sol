@@ -20,6 +20,15 @@ interface IBCoWPool is IERC1271, IBPool {
   /// @param amount Fee in raw token units.
   event CuratorFeePaid(address indexed curator, address indexed token, uint256 amount);
 
+  /// @notice Creator changed whether authenticated solver origins may use unsigned orders.
+  /// @param enabled Whether unsigned solver orders are accepted.
+  event SolverOrdersEnabled(bool enabled);
+
+  /// @notice The public swap fee is fixed at pool deployment.
+  error PublicSwapFeeIsFixed();
+  /// @notice Unsigned solver orders require opt-in, settlement caller and an authenticated origin.
+  error SolverOrderNotAuthorized();
+
   /// @notice Deployment settings exceed the supported duration or fee bounds.
   error InvalidSettings();
   /// @notice Only the immutable creator may replace the curator.
@@ -106,6 +115,16 @@ interface IBCoWPool is IERC1271, IBPool {
 
   /// @notice Pays the pending fill fee to the curator escrow at most once.
   function transferFee() external;
+
+  /// @notice Updates solver access without changing curator authority or fees.
+  /// @param enabled Whether eligible solver origins may build unsigned CoW orders.
+  function setSolverOrdersEnabled(
+    bool enabled
+  ) external;
+
+  /// @notice Current creator-controlled unsigned solver policy.
+  /// @return Whether solver-originated orders are enabled.
+  function solverOrdersEnabled() external view returns (bool);
 
   /**
    * @notice The address that can pull funds from the AMM vault to execute an order

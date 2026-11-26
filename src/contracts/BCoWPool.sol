@@ -30,6 +30,7 @@ import {Math} from '@openzeppelin/contracts/utils/math/Math.sol';
 
 import {IBCoWFactory} from 'interfaces/IBCoWFactory.sol';
 import {IBCoWPool} from 'interfaces/IBCoWPool.sol';
+import {IBPool} from 'interfaces/IBPool.sol';
 import {ISettlement} from 'interfaces/ISettlement.sol';
 
 /**
@@ -47,11 +48,15 @@ contract BCoWPool is IERC1271, IBCoWPool, BPool, BCoWConst, BCoWAppData, EIP712 
   /// @param curator Initial ECDSA order signer.
   /// @param orderDuration Maximum future order validity in seconds.
   /// @param curatorFeeBps Curator share of limit surplus in basis points.
+  /// @param publicSwapFee Fixed fee charged by ordinary public swaps, scaled by 1e18.
+  /// @param solverOrdersEnabled Whether authenticated solver origins may use unsigned orders.
   struct Settings {
     address creator;
     address curator;
     uint32 orderDuration;
     uint16 curatorFeeBps;
+    uint256 publicSwapFee;
+    bool solverOrdersEnabled;
   }
 
   /// @inheritdoc IBCoWPool
@@ -73,6 +78,8 @@ contract BCoWPool is IERC1271, IBCoWPool, BPool, BCoWConst, BCoWAppData, EIP712 
   uint16 public immutable curatorFeeBps;
   /// @notice Separate custody for earned fees; excluded from LP reserves.
   BCoWFeeEscrow public immutable feeEscrow;
+  /// @inheritdoc IBCoWPool
+  bool public solverOrdersEnabled;
   /// @notice Current ECDSA signer of standing orders.
   address public curator;
   /// @notice Lowest accepted curator signing epoch.
@@ -103,6 +110,10 @@ contract BCoWPool is IERC1271, IBCoWPool, BPool, BCoWConst, BCoWAppData, EIP712 
       settings.orderDuration < MIN_ORDER_DURATION || settings.orderDuration > MAX_ORDER_DURATION
         || settings.curatorFeeBps >= 10_000
     ) revert InvalidSettings();
+    if (settings.publicSwapFee < MIN_FEE) revert BPool_FeeBelowMinimum();
+    if (settings.publicSwapFee > MAX_FEE) revert BPool_FeeAboveMaximum();
+    _swapFee = settings.publicSwapFee;
+    solverOrdersEnabled = settings.solverOrdersEnabled;
     SOLUTION_SETTLER = ISettlement(cowSolutionSettler);
     SOLUTION_SETTLER_DOMAIN_SEPARATOR = ISettlement(cowSolutionSettler).domainSeparator();
     VAULT_RELAYER = ISettlement(cowSolutionSettler).vaultRelayer();
@@ -112,6 +123,24 @@ contract BCoWPool is IERC1271, IBCoWPool, BPool, BCoWConst, BCoWAppData, EIP712 
     orderDuration = settings.orderDuration;
     curatorFeeBps = settings.curatorFeeBps;
     feeEscrow = new BCoWFeeEscrow();
+  }
+
+  /// @inheritdoc IBPool
+  /// @notice Public swaps use the fee selected at deployment, including before finalization.
+  /// @dev Changing the public fee is not supported.
+  function setSwapFee(
+    uint256
+  ) external pure override(BPool, IBPool) {
+    revert PublicSwapFeeIsFixed();
+  }
+
+  /// @inheritdoc IBCoWPool
+  function setSolverOrdersEnabled(
+    bool enabled
+  ) external _viewlock_ {
+    if (msg.sender != creator) revert OnlyCreator();
+    solverOrdersEnabled = enabled;
+    emit SolverOrdersEnabled(enabled);
   }
 
   /// @inheritdoc IBCoWPool
@@ -180,7 +209,14 @@ contract BCoWPool is IERC1271, IBCoWPool, BPool, BCoWConst, BCoWAppData, EIP712 
     if (appData_ != appDataHash(h0, order.buyAmount)) revert AppDataDoesNotMatch();
     if (order.hash(SOLUTION_SETTLER_DOMAIN_SEPARATOR) != orderHash) revert OrderDoesNotMatchMessageHash();
     if (epoch < minEpoch) revert InvalidEpoch();
-    if (ECDSA.recover(curatorDigest(orderHash, epoch), curatorSig) != curator) revert InvalidCuratorSignature();
+    if (curatorSig.length == 0) {
+      if (
+        !solverOrdersEnabled || msg.sender != address(SOLUTION_SETTLER)
+          || !SOLUTION_SETTLER.authenticator().isSolver(tx.origin)
+      ) revert SolverOrderNotAuthorized();
+    } else if (ECDSA.recover(curatorDigest(orderHash, epoch), curatorSig) != curator) {
+      revert InvalidCuratorSignature();
+    }
     verify(order);
     return IERC1271.isValidSignature.selector;
   }

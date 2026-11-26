@@ -11,7 +11,11 @@ contract BCoWPoolForTest is BCoWPool {
     address cowSolutionSettler,
     address hooksTrampoline_,
     address creator_
-  ) BCoWPool(cowSolutionSettler, hooksTrampoline_, Settings(creator_, creator_, 180, 100), 'name', 'symbol') {}
+  )
+    BCoWPool(
+      cowSolutionSettler, hooksTrampoline_, Settings(creator_, creator_, 180, 100, 1e12, false), 'name', 'symbol'
+    )
+  {}
 
   bytes32 private _reenteringMutex;
 
