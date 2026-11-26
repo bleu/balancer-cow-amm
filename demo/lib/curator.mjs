@@ -6,7 +6,7 @@ import {
   units,
   FACTORY_ABI,
   ZERO,
-} from "../public/shared.mjs";
+} from "./shared.mjs";
 import { buildAppData, hashOrder } from "../../script/local/curated-order.mjs";
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const abs = (n) => (n < 0n ? -n : n);

@@ -13,6 +13,11 @@ assert.equal(
 assert.equal(config.chainId, 31338);
 assert.equal((await provider.getNetwork()).chainId, 31338);
 const state = await load();
+let rejectThirdBind = false,
+  binds = 0;
+const bindSelector = ethers.utils
+  .id("bind(address,uint256,uint256)")
+  .slice(0, 10);
 assert.equal(config.factory.toLowerCase(), state.factory.toLowerCase());
 for (const token of state.tokens) {
   const t = await contract("LocalStockToken", token.address);
@@ -42,6 +47,14 @@ try {
     if (method === "wallet_switchEthereumChain") return null;
     if (method === "eth_sendTransaction") {
       const t = params[0];
+      if (
+        rejectThirdBind &&
+        t.data?.startsWith(bindSelector) &&
+        ++binds === 3
+      ) {
+        rejectThirdBind = false;
+        throw Error("Intentional local wallet rejection during binding");
+      }
       const tx = await manager.sendTransaction({
         to: t.to,
         data: t.data,
@@ -92,7 +105,48 @@ try {
   await page.locator("#create").click();
   await page.locator("#suggest").click();
   await page.locator("#new-name").fill("Browser MAG7");
+  rejectThirdBind = true;
   await page.locator("#create-confirm").click();
+  await page.waitForFunction(
+    () =>
+      document.getElementById("create-confirm")?.textContent ===
+        "Resume initialization" &&
+      !document.getElementById("create-confirm").disabled,
+    null,
+    { timeout: 240000 }
+  );
+  const pending = await page.evaluate(() =>
+    JSON.parse(localStorage.getItem("folio-cow-pools-v1")).find(
+      (p) => p.name === "Browser MAG7"
+    )
+  );
+  assert.ok(
+    pending.address,
+    "Partial initialization must persist the recovered factory address"
+  );
+  await page.locator("#close-modal").click();
+  await page.goto(origin + "#" + pending.address);
+  await page.locator("#recover-assets").click();
+  await page.locator("#recover-confirm").click();
+  await page.waitForFunction(
+    () =>
+      document
+        .getElementById("progress")
+        ?.textContent.includes("Seeded assets recovered"),
+    null,
+    { timeout: 120000 }
+  );
+  assert.equal(
+    (
+      await (
+        await fetch(origin + "/api/pool?address=" + pending.address)
+      ).json()
+    ).tokens.length,
+    0
+  );
+  await page.locator("#close-modal").click();
+  await page.locator("#resume").click();
+  await page.locator("#initialize-confirm").click();
   await page.waitForFunction(
     () =>
       document
@@ -101,7 +155,7 @@ try {
     null,
     { timeout: 240000 }
   );
-  assert.equal(await page.locator("#create-confirm").isDisabled(), true);
+  assert.equal(await page.locator("#initialize-confirm").isDisabled(), true);
   await page.locator("#close-modal").click();
   await page.reload();
   await page.waitForSelector("#holdings tr");
@@ -140,7 +194,7 @@ try {
   await page.screenshot({ path: ".local/demo-desktop.png", fullPage: true });
   assert.deepEqual(errors, []);
   console.log(
-    "Create, reload recovery, local-only visibility and responsive layout passed."
+    "Create, interrupted setup recovery, unbind, resume, reload, local-only visibility and responsive layout passed."
   );
 } finally {
   await browser?.close();

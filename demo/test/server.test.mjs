@@ -60,3 +60,34 @@ test("Public API omits signing/RPC secrets and rejects log or write RPC methods"
     await new Promise((r) => server.close(r));
   }
 });
+
+test("Next handles pages while API method restrictions stay in the service", async () => {
+  let pageCalls = 0;
+  const { server } = createApp(config, {
+    chain: {},
+    prices: {},
+    cow: {},
+    worker: { status: {}, paused: false },
+    pageHandler: (_req, res) => {
+      pageCalls++;
+      res.writeHead(200, { "content-type": "text/html" });
+      res.end("<main>Next page</main>");
+    },
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const origin = "http://127.0.0.1:" + server.address().port;
+  try {
+    assert.equal(
+      await (await fetch(origin + "/")).text(),
+      "<main>Next page</main>"
+    );
+    assert.equal(
+      (await fetch(origin + "/api/config", { method: "POST" })).status,
+      405
+    );
+    assert.equal((await fetch(origin + "/api/unknown")).status, 404);
+    assert.equal(pageCalls, 1);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

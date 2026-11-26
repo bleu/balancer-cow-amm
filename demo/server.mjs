@@ -1,5 +1,4 @@
 import http from "node:http";
-import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ethers } from "ethers";
@@ -8,7 +7,7 @@ import { Chain } from "./lib/chain.mjs";
 import { Prices } from "./lib/prices.mjs";
 import { Cow } from "./lib/cow.mjs";
 import { Curator, safeReason } from "./lib/curator.mjs";
-import { ASSETS, lower, USD } from "./public/shared.mjs";
+import { ASSETS, lower, USD } from "./lib/shared.mjs";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const json = (res, status, data) => {
   res.writeHead(status, {
@@ -25,22 +24,21 @@ export function createApp(
     prices = new Prices(config),
     cow = new Cow(config),
     worker,
+    pageHandler,
   } = {}
 ) {
   const signer = config.key
     ? new ethers.Wallet(config.key, chain.provider)
     : null;
   worker ??= new Curator(config, { chain, prices, cow, signer });
-  const staticFiles = {
-    "/": "index.html",
-    "/app.mjs": "app.mjs",
-    "/shared.mjs": "shared.mjs",
-    "/style.css": "style.css",
-  };
   const rates = new Map();
   const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
+      if (!url.pathname.startsWith("/api/")) {
+        if (pageHandler) return pageHandler(req, res);
+        return json(res, 404, { error: "Not found" });
+      }
       if (req.method !== "GET")
         return json(res, 405, { error: "Read-only API" });
       // Only bounded reads and explicit RPC methods; never accept arbitrary relay payloads or log requests.
@@ -84,6 +82,7 @@ export function createApp(
             "eth_blockNumber",
             "eth_getBlockByNumber",
             "eth_getTransactionReceipt",
+            "eth_getTransactionByHash",
             "eth_getTransactionCount",
             "eth_estimateGas",
             "eth_gasPrice",
@@ -122,31 +121,7 @@ export function createApp(
           })
         );
       }
-      if (url.pathname === "/vendor/ethers.js") {
-        res.writeHead(200, {
-          "content-type": "text/javascript",
-          "cache-control": "public,max-age=3600",
-        });
-        return res.end(
-          await fs.readFile(
-            path.resolve(root, "../node_modules/ethers/dist/ethers.umd.min.js")
-          )
-        );
-      }
-      const file = staticFiles[url.pathname];
-      if (!file) return json(res, 404, { error: "Not found" });
-      res.writeHead(200, {
-        "content-type": file.endsWith(".css")
-          ? "text/css"
-          : file.endsWith(".mjs")
-          ? "text/javascript"
-          : "text/html",
-        "cache-control": "no-cache",
-        "x-content-type-options": "nosniff",
-        "content-security-policy":
-          "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
-      });
-      res.end(await fs.readFile(path.join(root, "public", file)));
+      return json(res, 404, { error: "Not found" });
     } catch (e) {
       json(res, 502, { error: safeReason(e) });
     }
@@ -155,7 +130,16 @@ export function createApp(
 }
 async function main() {
   const config = loadConfig();
-  const app = createApp(config);
+  const { default: next } = await import("next");
+  const web = next({
+    dev: process.env.NODE_ENV !== "production",
+    dir: path.join(root, "web"),
+    webpack: true,
+    hostname: config.host,
+    port: config.port,
+  });
+  await web.prepare();
+  const app = createApp(config, { pageHandler: web.getRequestHandler() });
   if (config.localDev && config.fixturePrices) {
     app.prices.get = async () =>
       (app.prices.cache = {
@@ -192,6 +176,7 @@ async function main() {
     } catch (e) {
       app.worker.emit("error", safeReason(e));
     }
+    if (stopped) return;
     const waiting = app.worker.status.state === "startup-wait";
     timer = setTimeout(
       tick,
@@ -209,7 +194,7 @@ async function main() {
     stopped = true;
     clearTimeout(timer);
     app.worker.paused = true;
-    app.server.close();
+    app.server.close(() => web.close());
   };
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);

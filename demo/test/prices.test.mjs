@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Prices } from "../lib/prices.mjs";
-import { ASSETS, lower, USD } from "../public/shared.mjs";
+import { ASSETS, lower, USD } from "../lib/shared.mjs";
 const config = { intervalSeconds: 3600, priceMaxAgeSeconds: 1800 };
 test("One batched request per hour, callers share cache, freshness checked separately", async () => {
   let calls = 0,

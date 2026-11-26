@@ -10,7 +10,7 @@ import {
   nextPair,
   mergeCatalog,
   lower,
-} from "../public/shared.mjs";
+} from "../lib/shared.mjs";
 const holdings = () =>
   ASSETS.map((a) => ({
     ...a,

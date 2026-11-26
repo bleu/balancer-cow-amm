@@ -1,4 +1,4 @@
-import { ASSETS, lower, USD } from "../public/shared.mjs";
+import { ASSETS, lower, USD } from "./shared.mjs";
 import { jsonRequest } from "./http.mjs";
 export class Prices {
   constructor(

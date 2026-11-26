@@ -1,0 +1,837 @@
+"use client";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { getAddress, isAddress, type Address } from "viem";
+import { decimal, mergeCatalog, portfolio } from "../../lib/shared.mjs";
+import { api, errorText, money, short } from "../lib/api";
+import { isDraft, readSaved } from "../lib/catalog";
+import { usePoolWallet } from "../lib/wallet";
+import type {
+  DemoConfig,
+  Draft,
+  PoolEntry,
+  PoolSnapshot,
+  PriceSnapshot,
+  SavedPool,
+  WorkerStatus,
+  CowOrder,
+} from "../lib/types";
+import {
+  Dialog,
+  CreateForm,
+  InitializeForm,
+  ImportForm,
+  LiquidityForm,
+  RecoverForm,
+  CuratorForm,
+} from "./pool-dialogs";
+type Modal =
+  | { kind: "create"; curator: Address }
+  | { kind: "import" }
+  | { kind: "initialize"; draft: Draft }
+  | {
+      kind: "deposit" | "withdraw" | "recover" | "curator";
+      pool: PoolSnapshot;
+    };
+function useCatalog() {
+  const [saved, setSaved] = useState<SavedPool[]>([]);
+  useEffect(() => {
+    const read = () => setSaved(readSaved());
+    read();
+    window.addEventListener("storage", read);
+    window.addEventListener("folio:catalog", read);
+    return () => {
+      window.removeEventListener("storage", read);
+      window.removeEventListener("folio:catalog", read);
+    };
+  }, []);
+  return saved;
+}
+function useRoute() {
+  const [address, setAddress] = useState<Address | null>(null);
+  useEffect(() => {
+    const update = () => {
+      const value = location.hash.slice(1);
+      setAddress(isAddress(value) ? getAddress(value) : null);
+    };
+    update();
+    window.addEventListener("hashchange", update);
+    return () => window.removeEventListener("hashchange", update);
+  }, []);
+  return address;
+}
+export function Demo({ config }: { config: DemoConfig }) {
+  const wallet = usePoolWallet(config),
+    saved = useCatalog(),
+    address = useRoute(),
+    client = useQueryClient();
+  const [notice, setNotice] = useState(""),
+    [modal, setModal] = useState<Modal | null>(null),
+    [connecting, setConnecting] = useState(false);
+  const prices = useQuery({
+    queryKey: ["prices"],
+    queryFn: () =>
+      api<{ snapshot: PriceSnapshot | null; error: string | null }>(
+        "/api/prices"
+      ),
+    refetchInterval: 30000,
+  });
+  const status = useQuery({
+    queryKey: ["status"],
+    queryFn: () => api<WorkerStatus>("/api/status"),
+    refetchInterval: 15000,
+  });
+  const pool = useQuery({
+    queryKey: ["pool", address, wallet.address],
+    queryFn: () =>
+      api<PoolSnapshot>(
+        "/api/pool?address=" +
+          address +
+          (wallet.address ? "&wallet=" + wallet.address : "")
+      ),
+    enabled: !!address,
+    refetchInterval: 30000,
+  });
+  const entries = mergeCatalog(config.pools, saved, config.chainId),
+    snapshot = prices.data?.snapshot ?? null;
+  async function connect() {
+    setConnecting(true);
+    try {
+      await wallet.ensure();
+      setNotice("");
+    } catch (e) {
+      setNotice(errorText(e));
+    } finally {
+      setConnecting(false);
+    }
+  }
+  async function open(next: Modal) {
+    try {
+      if (next.kind !== "import") await wallet.ensure();
+      setNotice("");
+      setModal(next);
+    } catch (e) {
+      setNotice(errorText(e));
+    }
+  }
+  async function complete(next?: Address) {
+    if (next) location.hash = next;
+    await client.invalidateQueries({ queryKey: ["pool"] });
+    await client.invalidateQueries({ queryKey: ["catalog-pool"] });
+  }
+  const shared = { config, ensure: wallet.ensure, complete };
+  let dialog: React.ReactNode = null,
+    title = "";
+  if (modal) {
+    if (modal.kind === "create") {
+      title = "Create a MAG7 pool";
+      dialog = (
+        <CreateForm
+          {...shared}
+          prices={snapshot}
+          initialCurator={modal.curator}
+        />
+      );
+    } else if (modal.kind === "import") {
+      title = "Add a pool by address";
+      dialog = (
+        <ImportForm
+          config={config}
+          complete={async (next) => {
+            await complete(next);
+            setModal(null);
+          }}
+        />
+      );
+    } else if (modal.kind === "initialize") {
+      title = "Initialize " + modal.draft.name;
+      dialog = (
+        <InitializeForm
+          draft={modal.draft}
+          ensure={wallet.ensure}
+          complete={complete}
+        />
+      );
+    } else if (modal.kind === "deposit" || modal.kind === "withdraw") {
+      title =
+        modal.kind === "deposit"
+          ? "Deposit into the basket"
+          : "Withdraw from the basket";
+      dialog = (
+        <LiquidityForm {...shared} pool={modal.pool} mode={modal.kind} />
+      );
+    } else if (modal.kind === "recover") {
+      title = "Recover unfinalized seed assets";
+      dialog = (
+        <RecoverForm
+          pool={modal.pool}
+          ensure={wallet.ensure}
+          complete={complete}
+        />
+      );
+    } else {
+      title = "Replace curator";
+      dialog = (
+        <CuratorForm
+          pool={modal.pool}
+          ensure={wallet.ensure}
+          complete={complete}
+        />
+      );
+    }
+  }
+  return (
+    <>
+      <header className="flex items-center justify-between border-b border-line bg-white/70 px-5 py-5 md:px-[5%]">
+        <a href="#" className="flex items-center gap-2 text-xl font-bold">
+          <span className="rounded-md bg-forest px-1.5 text-[#d6f4a0]">f.</span>
+          folio
+          <span className="ml-2 border-l border-line pl-3 text-[10px] tracking-widest text-slate-500">
+            CoW AMM
+          </span>
+        </a>
+        <div className="flex items-center gap-3">
+          <span
+            id="network"
+            className="rounded-full bg-emerald-950/5 px-3 py-1.5 text-xs"
+          >
+            {config.localDev ? "Local fixture" : config.name}
+          </span>
+          <button
+            id="connect"
+            className="button secondary"
+            disabled={connecting}
+            onClick={connect}
+          >
+            {connecting
+              ? "Connecting…"
+              : wallet.address
+              ? short(wallet.address)
+              : "Connect wallet"}
+          </button>
+        </div>
+      </header>
+      <main className="mx-auto min-h-[80vh] max-w-6xl px-5 pb-14 md:px-10">
+        <nav className="flex gap-3 py-6 text-xs text-slate-500">
+          <a href="#" className="text-forest">
+            Explore pools
+          </a>
+          <span>/</span>
+          <span>
+            {address ? pool.data?.name ?? "Pool details" : "MAG7 collection"}
+          </span>
+        </nav>
+        {config.localDev && (
+          <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+            Local synthetic-token fixture. This is not a funded Base pool or
+            production CoW execution.
+          </div>
+        )}
+        {notice && (
+          <div
+            id="notice"
+            role="status"
+            className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"
+          >
+            {notice}
+          </div>
+        )}
+        {address ? (
+          pool.data ? (
+            <Details
+              config={config}
+              pool={pool.data}
+              prices={snapshot}
+              status={status.data}
+              statusError={status.isError}
+              wallet={wallet.address}
+              saved={saved}
+              open={open}
+              notify={setNotice}
+            />
+          ) : (
+            <p role="status" className="panel">
+              {pool.error?.message ?? "Reading pool state…"}
+            </p>
+          )
+        ) : (
+          <Catalog
+            config={config}
+            entries={entries}
+            saved={saved}
+            wallet={wallet.address}
+            prices={snapshot}
+            open={open}
+            create={async () => {
+              try {
+                const w = await wallet.ensure();
+                setModal({ kind: "create", curator: w.account });
+              } catch (e) {
+                setNotice(errorText(e));
+              }
+            }}
+          />
+        )}
+      </main>
+      <footer className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-line px-5 py-7 text-[10px] text-slate-500 md:px-10">
+        <span>folio / an on-chain portfolio experiment</span>
+        <span>Base · CoW Protocol · No indexer</span>
+      </footer>
+      {modal && (
+        <Dialog key={modal.kind} title={title} onClose={() => setModal(null)}>
+          {dialog}
+        </Dialog>
+      )}
+    </>
+  );
+}
+function Catalog({
+  config,
+  entries,
+  saved,
+  wallet,
+  prices,
+  open,
+  create,
+}: {
+  config: DemoConfig;
+  entries: PoolEntry[];
+  saved: SavedPool[];
+  wallet?: Address;
+  prices: PriceSnapshot | null;
+  open: (modal: Modal) => Promise<void>;
+  create: () => Promise<void>;
+}) {
+  const drafts = saved
+    .filter(isDraft)
+    .filter(
+      (p) =>
+        p.chainId === config.chainId &&
+        !p.address &&
+        (!wallet || p.creator.toLowerCase() === wallet.toLowerCase())
+    );
+  return (
+    <section id="catalog-view">
+      <div className="flex flex-wrap items-end justify-between gap-6 py-8 md:py-12">
+        <div>
+          <p className="eyebrow">A basket. A little more balance.</p>
+          <h1 className="text-4xl font-semibold leading-tight tracking-tight md:text-6xl">
+            Seven companies.
+            <br />
+            One portfolio.
+          </h1>
+          <p className="mt-5 text-base leading-relaxed text-slate-500">
+            Hold the Magnificent Seven in a weighted basket.
+            <br />
+            Curated orders rebalance through CoW Protocol.
+          </p>
+        </div>
+        <button
+          id="create"
+          className="button primary"
+          disabled={!config.factory}
+          onClick={create}
+        >
+          Create a pool
+        </button>
+      </div>
+      <div className="my-6 flex justify-between gap-3">
+        <h2 className="text-lg font-semibold">Your pool collection</h2>
+        <button
+          id="import"
+          className="text-button"
+          onClick={() => open({ kind: "import" })}
+        >
+          Add by address
+        </button>
+      </div>
+      <div id="pools" className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {!entries.length && (
+          <div className="panel sm:col-span-2 lg:col-span-3">
+            <h2 className="text-xl font-semibold">
+              {config.factory
+                ? "Your first basket starts here."
+                : "Ready for a Base deployment."}
+            </h2>
+            <p className="note mt-3">
+              {config.factory
+                ? "Create a MAG7 pool or add a known pool address. New pools stay in this browser until explicitly registered."
+                : "The MAG7 preset is configured. Deploy a demo factory and fund a pool to enable live wallet flows."}
+            </p>
+          </div>
+        )}
+        {entries.map((e) => (
+          <PoolCard key={e.address} entry={e} prices={prices} />
+        ))}
+        {drafts.map((d) => (
+          <button
+            key={d.requestId}
+            className="panel text-left"
+            onClick={() => open({ kind: "initialize", draft: d })}
+          >
+            Recover creation: {d.name}
+          </button>
+        ))}
+      </div>
+      <section className="my-10 grid gap-8 rounded-xl bg-forest p-7 text-white md:grid-cols-2 md:p-10">
+        <div>
+          <p className="mb-4 text-[10px] font-bold tracking-widest text-[#d6f4a0]">
+            THE MAG7 PRESET
+          </p>
+          <h2 className="text-3xl font-semibold leading-tight tracking-tight">
+            Built around the businesses
+            <br />
+            you already know.
+          </h2>
+          <p className="mt-5 text-sm leading-relaxed text-emerald-100/75">
+            Fixed target weights. Proportional deposits.
+            <br />
+            One live rebalance order at a time.
+          </p>
+        </div>
+        <div>
+          {config.assets.map((a) => (
+            <div
+              key={a.address}
+              className="flex justify-between border-b border-white/15 py-3 text-sm"
+            >
+              <span className="flex items-center gap-3">
+                <i
+                  className="size-2 rounded-full"
+                  style={{ background: a.color }}
+                />
+                {a.name}
+                <span className="text-xs text-white/50">{a.symbol}</span>
+              </span>
+              <strong>{a.weight}%</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+      <p className="text-xs text-slate-500">
+        Pools created here stay in this browser. Public listing and curator
+        service require explicit registration.
+      </p>
+    </section>
+  );
+}
+function PoolCard({
+  entry,
+  prices,
+}: {
+  entry: PoolEntry;
+  prices: PriceSnapshot | null;
+}) {
+  const pool = useQuery({
+    queryKey: ["catalog-pool", entry.address],
+    queryFn: () => api<PoolSnapshot>("/api/pool?address=" + entry.address),
+    refetchInterval: 30000,
+  });
+  let value = "Loading reserves…";
+  if (pool.error) value = "Unavailable";
+  else if (pool.data) {
+    try {
+      value = pool.data.finalized
+        ? prices
+          ? money(portfolio(pool.data.tokens, prices.values).total)
+          : "Prices unavailable"
+        : "Initialization pending";
+    } catch {
+      value = "Prices unavailable";
+    }
+  }
+  return (
+    <a
+      href={"#" + entry.address}
+      data-pool={entry.address}
+      className="panel block text-left transition-colors hover:border-forest"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="rounded-lg bg-emerald-50 p-3 text-sm font-bold">
+          M7
+        </span>
+        <span className="rounded-full bg-emerald-950/5 px-3 py-1 text-[10px]">
+          {entry.public ? "Whitelisted" : "Saved locally"}
+        </span>
+      </div>
+      <h3 className="mt-6 text-xl font-semibold">
+        {entry.name ?? pool.data?.name ?? "MAG7 pool"}
+      </h3>
+      <p className="mt-2 text-xs leading-relaxed text-slate-500">
+        {short(entry.address)}
+        <br />
+        Seven assets · Fixed target weights
+      </p>
+      <div className="mt-6 flex justify-between border-t border-line pt-4 text-xs">
+        <span>{value}</span>
+        <span className="text-forest">View pool →</span>
+      </div>
+    </a>
+  );
+}
+function Details({
+  config,
+  pool,
+  prices,
+  status,
+  statusError,
+  wallet,
+  saved,
+  open,
+  notify,
+}: {
+  config: DemoConfig;
+  pool: PoolSnapshot;
+  prices: PriceSnapshot | null;
+  status?: WorkerStatus;
+  statusError: boolean;
+  wallet?: Address;
+  saved: SavedPool[];
+  open: (modal: Modal) => Promise<void>;
+  notify: (text: string) => void;
+}) {
+  let view: ReturnType<
+    typeof portfolio<PoolSnapshot["tokens"][number]>
+  > | null = null;
+  try {
+    if (prices && pool.tokens.length)
+      view = portfolio(pool.tokens, prices.values);
+  } catch {}
+  const registered = status?.registeredPools.some(
+    (a) => a.toLowerCase() === pool.address.toLowerCase()
+  );
+  const worker = status?.pools?.[pool.address.toLowerCase()] ?? status;
+  const totalWeight = pool.tokens.reduce((n, t) => n + BigInt(t.denorm), 0n);
+  const stale =
+    prices &&
+    Object.values(prices.values).some(
+      (p) => Date.now() / 1000 - p.updatedAt > config.priceMaxAgeSeconds
+    );
+  const draft = saved.find(
+    (p) => p.address?.toLowerCase() === pool.address.toLowerCase() && isDraft(p)
+  );
+  const publicPool = config.pools.some(
+    (p) => p.address.toLowerCase() === pool.address.toLowerCase()
+  );
+  const settings = [
+    ["Creator", short(pool.creator)],
+    ["Curator", short(pool.curator)],
+    ["Order lifetime", pool.duration + " seconds"],
+    ["Curator fee", pool.feeBps / 100 + "% of limit surplus"],
+    [
+      "Accrued curator fees",
+      pool.tokens
+        .map((t) => decimal(t.curatorClaimable, t.decimals, 5) + " " + t.symbol)
+        .join(" · "),
+    ],
+    ["LP supply", decimal(pool.supply, 18, 4)],
+    ["Direct swap fee", (Number(pool.swapFee) / 1e16).toFixed(4) + "%"],
+    ["State", pool.finalized ? "Finalized" : "Initialization pending"],
+  ];
+  return (
+    <section id="detail-view">
+      <div className="my-5 flex flex-wrap items-center justify-between gap-5">
+        <div className="min-w-0">
+          <p className="eyebrow">
+            {publicPool ? "Whitelisted pool" : "Locally viewed pool"} /{" "}
+            {config.name}
+          </p>
+          <h1 id="pool-name" className="text-4xl font-semibold tracking-tight">
+            {pool.name}
+          </h1>
+          <button
+            id="copy-address"
+            className="mt-4 max-w-full break-all text-left font-mono text-[10px] text-slate-500 underline"
+            onClick={() =>
+              navigator.clipboard
+                .writeText(pool.address)
+                .then(() => notify("Pool address copied."))
+                .catch(() =>
+                  notify("Clipboard unavailable. Copy the displayed address.")
+                )
+            }
+          >
+            {pool.address} · Copy
+          </button>
+        </div>
+        <div className="flex gap-3">
+          <button
+            id="deposit"
+            className="button primary"
+            disabled={!pool.finalized}
+            onClick={() => open({ kind: "deposit", pool })}
+          >
+            Deposit
+          </button>
+          <button
+            id="withdraw"
+            className="button secondary"
+            disabled={!pool.finalized}
+            onClick={() => open({ kind: "withdraw", pool })}
+          >
+            Withdraw
+          </button>
+        </div>
+      </div>
+      <div className="my-8 grid gap-4 md:grid-cols-3">
+        <Stat
+          label="Pool value"
+          value={view ? money(view.total) : "—"}
+          detail={
+            prices
+              ? `${stale ? "Stale reference" : "Reference prices"} · ${new Date(
+                  prices.fetchedAt * 1000
+                ).toLocaleTimeString()} · ${prices.source}`
+              : "CoinGecko prices unavailable"
+          }
+        />
+        <Stat
+          label="Your position"
+          value={
+            wallet && view && BigInt(pool.supply) > 0n
+              ? money(
+                  (view.total * BigInt(pool.walletShares)) / BigInt(pool.supply)
+                )
+              : "—"
+          }
+          detail={
+            wallet
+              ? decimal(pool.walletShares, 18, 6) +
+                " " +
+                pool.symbol +
+                " shares"
+              : "Connect your wallet"
+          }
+        />
+        <Stat
+          label="Rebalance service"
+          value={
+            statusError
+              ? "Offline"
+              : !registered
+              ? "Not enrolled"
+              : status?.live
+              ? worker?.state ?? "Starting"
+              : "Dry run"
+          }
+          detail={
+            statusError
+              ? "Curator status unavailable"
+              : registered
+              ? worker?.reason ?? "Awaiting check"
+              : "Local creation does not enroll this pool for automated rebalancing."
+          }
+        >
+          <small>
+            {registered && status?.lastCheck
+              ? "Last check " +
+                new Date(status.lastCheck * 1000).toLocaleTimeString()
+              : ""}
+            {registered && status?.nextCheck
+              ? " · Next " +
+                new Date(status.nextCheck * 1000).toLocaleTimeString()
+              : ""}
+            {registered && status?.currentOrder
+              ? " · Live order " + short(status.currentOrder)
+              : ""}
+          </small>
+        </Stat>
+      </div>
+      <div className="panel">
+        <div className="flex flex-wrap justify-between gap-3">
+          <h2 className="text-lg font-semibold">Inside the basket</h2>
+          <span className="text-xs text-slate-500">
+            Current allocation / target
+          </span>
+        </div>
+        <div className="my-6 flex h-1.5 overflow-hidden rounded-full gap-0.5">
+          {pool.tokens.map((t) => (
+            <span
+              key={t.address}
+              title={t.symbol}
+              style={{
+                background:
+                  config.assets.find(
+                    (a) => a.address.toLowerCase() === t.address.toLowerCase()
+                  )?.color ?? "#bac9b4",
+                flex: Number(
+                  view?.assets.find((a) => a.address === t.address)?.value ??
+                    t.denorm
+                ),
+              }}
+            />
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[540px]">
+            <thead>
+              <tr>
+                <th>Asset</th>
+                <th>Holdings</th>
+                <th>Value</th>
+                <th>Allocation</th>
+                <th>Target</th>
+              </tr>
+            </thead>
+            <tbody id="holdings">
+              {pool.tokens.map((t) => {
+                const v = view?.assets.find((a) => a.address === t.address);
+                return (
+                  <tr key={t.address}>
+                    <td>
+                      <strong>{t.symbol}</strong>
+                      <small>{t.name}</small>
+                    </td>
+                    <td>{decimal(t.balance, t.decimals, 5)}</td>
+                    <td>{v ? money(v.value) : "—"}</td>
+                    <td>
+                      {v && view
+                        ? (
+                            (Number(v.value) * 100) /
+                            Number(view.total)
+                          ).toFixed(2) + "%"
+                        : "—"}
+                    </td>
+                    <td>
+                      {totalWeight
+                        ? (
+                            Number((BigInt(t.denorm) * 10000n) / totalWeight) /
+                            100
+                          ).toFixed(2) + "%"
+                        : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <Activity pool={pool.address} chainId={config.chainId} />
+        <section className="panel">
+          <h2 className="text-lg font-semibold">Pool settings</h2>
+          <dl className="mt-5 grid grid-cols-[auto_1fr] items-start gap-x-5 gap-y-3 text-xs">
+            {settings.map(([name, value]) => (
+              <div key={name} className="contents">
+                <dt className="text-slate-500">{name}</dt>
+                <dd className="break-words text-right font-mono text-[10px]">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+          {wallet?.toLowerCase() === pool.creator.toLowerCase() && (
+            <button
+              id="replace-curator"
+              className="text-button mt-6"
+              onClick={() => open({ kind: "curator", pool })}
+            >
+              Replace curator
+            </button>
+          )}
+        </section>
+      </div>
+      {!pool.finalized && draft && isDraft(draft) && (
+        <section className="panel mt-5">
+          <h2 className="text-lg font-semibold">
+            Finish initializing your pool
+          </h2>
+          <p className="note my-3">
+            Progress is read on-chain. Bound tokens will not be deposited twice.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button
+              id="resume"
+              className="button primary"
+              onClick={() => open({ kind: "initialize", draft })}
+            >
+              Resume initialization
+            </button>
+            <button
+              id="recover-assets"
+              className="button secondary"
+              onClick={() => open({ kind: "recover", pool })}
+            >
+              Recover seeded assets
+            </button>
+          </div>
+        </section>
+      )}
+    </section>
+  );
+}
+function Stat({
+  label,
+  value,
+  detail,
+  children,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <article className="panel">
+      <span className="text-xs text-slate-500">{label}</span>
+      <strong className="mt-2 block text-2xl font-semibold">{value}</strong>
+      <small>{detail}</small>
+      {children}
+    </article>
+  );
+}
+function Activity({ pool, chainId }: { pool: Address; chainId: number }) {
+  const orders = useQuery({
+    queryKey: ["activity", pool],
+    queryFn: () => api<CowOrder[]>("/api/activity?pool=" + pool),
+    refetchInterval: 30000,
+  });
+  return (
+    <section className="panel">
+      <div className="flex justify-between">
+        <h2 className="text-lg font-semibold">CoW activity</h2>
+        <button
+          id="refresh-activity"
+          className="text-button"
+          onClick={() => void orders.refetch()}
+        >
+          Refresh
+        </button>
+      </div>
+      <div id="activity" className="mt-5 text-xs text-slate-500">
+        {orders.error
+          ? "Order activity unavailable. Pool state and wallet actions still use RPC."
+          : !orders.data
+          ? "Loading orders…"
+          : !orders.data.length
+          ? "No CoW orders yet. Local pools are not curated automatically."
+          : orders.data.slice(0, 8).map((o) => (
+              <div
+                key={o.uid}
+                className="flex justify-between gap-4 border-b border-line py-3"
+              >
+                <div>
+                  {o.kind} order · {o.status}
+                  <small>
+                    {o.creationDate
+                      ? new Date(o.creationDate).toLocaleString()
+                      : short(o.uid)}
+                  </small>
+                </div>
+                <a
+                  className="text-forest underline"
+                  href={`https://explorer.cow.fi/${chainId}/orders/${encodeURIComponent(
+                    o.uid
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Order details
+                </a>
+              </div>
+            ))}
+      </div>
+    </section>
+  );
+}

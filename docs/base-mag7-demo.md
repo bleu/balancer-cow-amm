@@ -355,7 +355,7 @@ Measure commit and fee-hook gas with the real seven B20 assets and production-co
 
 1. Implemented: strict $0.10 drift floor, fee-aware execution-cost check, 1,800-second freshness, 10 bps limit buffer and eight sizing attempts. Live quotes remain deployment-dependent.
 2. Implemented: configurable UI default of 100 bps of limit surplus, displayed before submission.
-3. Implemented: buildless HTML/CSS/JavaScript, ethers and Node 22 service. Base RPC, optional free CoinGecko key, funding amounts and deployment domain are operator configuration. No database is required.
+3. Implemented: Next.js/React in TypeScript, Tailwind CSS, viem/wagmi, and a Node 22 curator/API service. Base RPC, optional free CoinGecko key, funding amounts and deployment domain are operator configuration. No database is required.
 4. Validate CoW's quote, protocol-fee and minimum-validity behavior against the final canonical payload, then exercise the B20-native lifecycle in a supported environment.
 
 The demo is implemented. Deployment/funding and the production acceptance scenario remain unverified.

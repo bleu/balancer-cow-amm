@@ -1,7 +1,7 @@
 // Read-only remote simulation. No Wallet, sendTransaction or broadcast path.
 import fs from "node:fs/promises";
 import { ethers } from "ethers";
-import { ASSETS, TOKEN_ABI } from "./public/shared.mjs";
+import { ASSETS, TOKEN_ABI } from "./lib/shared.mjs";
 import { jsonRequest } from "./lib/http.mjs";
 const provider = new ethers.providers.JsonRpcProvider(
   {

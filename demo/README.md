@@ -4,6 +4,22 @@ A wallet frontend and a single-process curator service for the [demo plan](../do
 
 The frontend creates and resumes pools, recovers abandoned seed assets, imports pools by address, joins/exits proportionally, reads reserves and current curator fees, and lets the creator replace the curator. Financial state comes from RPC. Creation addresses come from `factory.createdPool(creator, requestId)`, without log scanning or receipt event decoding.
 
+## Frontend stack
+
+The frontend lives in `demo/web`: Next.js App Router, React, strict TypeScript and Tailwind CSS. Wagmi manages injected-wallet connections and account/network changes; viem reads, simulates, estimates and submits contract transactions. TanStack Query caches and refreshes API reads. Shared basket math and ABI definitions live in `demo/lib/shared.mjs` with TypeScript declarations.
+
+`pnpm demo:serve` (Base) and `pnpm demo:serve:local` (Anvil) run the Next development server with live reload. A single Node process serves Next pages, the existing read-only `/api/*` routes and the curator loop. Wallet transactions go through the injected wallet. Next builds do not start the curator or contact RPC/price services, and no signing key or RPC credential is bundled into the frontend.
+
+For production:
+
+```sh
+pnpm demo:build
+pnpm demo:start                   # loads .env
+# Or pnpm demo:start:local for an explicit local production-build preview.
+```
+
+`pnpm demo:typecheck` checks the frontend without emitting JavaScript. Next build output and generated types are ignored in `demo/web/.next`.
+
 ## Local demo
 
 Requires Node **22.9+**, pnpm 10, Foundry and the repository dependencies.
@@ -72,6 +88,8 @@ The HTTP service binds to `127.0.0.1` by default. Put a public deployment behind
 ## Validation
 
 ```sh
+pnpm demo:build                    # production Next build + TypeScript checks
+pnpm demo:typecheck                # standalone strict frontend typecheck
 pnpm test:demo                     # deterministic service/math/signing/security tests
 pnpm test:demo:local               # requires the deployed Anvil fixture; real pool curve + quote stub
 pnpm test:local:settlement         # pinned CoW settlement, seven-asset pool
@@ -85,7 +103,7 @@ DEMO_BROWSER_URL=http://127.0.0.1:3000 pnpm test:demo:browser
 pnpm demo:probe:b20
 ```
 
-The browser journey mints **local** stocks, deposits, withdraws, creates/finalizes a pool, reloads it, verifies a second browser cannot discover it, and checks mobile overflow. It refuses any network/configuration other than the explicit local fixture. Screenshots go to `.local/demo-desktop.png` and `.local/demo-mobile.png`.
+The browser journey mints **local** stocks, deposits, withdraws, interrupts pool initialization, recovers seeded assets, resumes/finalizes the same pool, reloads it, verifies a second browser cannot discover it, and checks mobile overflow. It refuses any network/configuration other than the explicit local fixture. Screenshots go to `.local/demo-desktop.png` and `.local/demo-mobile.png`.
 
 The native B20 probe uses actual Base token implementations and balances, with ephemeral source/harness code overrides only. It covers all seven tokens through allowance, binding, finalization, LP join/exit, real pinned vault-relayer transfers, capped trampoline hooks, curator fee credit and escrow withdrawal. **It never sends a transaction.** The source helper is deliberately unsafe test code: never broadcast `script/demo/B20Probe.sol`.
 

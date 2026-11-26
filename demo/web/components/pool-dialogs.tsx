@@ -1,0 +1,625 @@
+"use client";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { getAddress, isAddress, zeroAddress } from "viem";
+import { decimal, liquidityAmounts, units } from "../../lib/shared.mjs";
+import { api, errorText } from "../lib/api";
+import { savePool } from "../lib/catalog";
+import { poolAbi, requestId, tokenAbi, type PoolActions } from "../lib/wallet";
+import type {
+  DemoConfig,
+  Draft,
+  PoolSnapshot,
+  PriceSnapshot,
+  Progress,
+} from "../lib/types";
+interface Tools {
+  busy: boolean;
+  progress: Progress;
+  run: (fn: () => Promise<void>) => Promise<void>;
+}
+const Context = createContext<Tools | null>(null);
+function useTools() {
+  const tools = useContext(Context);
+  if (!tools) throw Error("Missing dialog");
+  return tools;
+}
+export function Dialog({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null),
+    [busy, setBusy] = useState(false),
+    [text, setText] = useState("");
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  const active = useRef(false);
+  const run = async (fn: () => Promise<void>) => {
+    if (active.current) return;
+    active.current = true;
+    setBusy(true);
+    try {
+      await fn();
+    } catch (e) {
+      setText(errorText(e));
+    } finally {
+      active.current = false;
+      setBusy(false);
+    }
+  };
+  return (
+    <dialog
+      ref={ref}
+      id="modal"
+      onCancel={(e) => {
+        e.preventDefault();
+        if (!busy) onClose();
+      }}
+      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-auto rounded-2xl border border-line bg-white p-6 text-ink shadow-xl backdrop:bg-ink/35"
+    >
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <button
+          id="close-modal"
+          aria-label="Close dialog"
+          onClick={onClose}
+          disabled={busy}
+          className="px-2 text-2xl"
+        >
+          ×
+        </button>
+      </div>
+      <Context.Provider value={{ busy, progress: setText, run }}>
+        <fieldset disabled={busy}>{children}</fieldset>
+      </Context.Provider>
+      <div
+        id="progress"
+        role="status"
+        aria-live="polite"
+        className="mt-5 whitespace-pre-wrap break-words text-sm leading-relaxed text-forest"
+      >
+        {text}
+      </div>
+    </dialog>
+  );
+}
+interface Shared {
+  config: DemoConfig;
+  ensure: () => Promise<PoolActions>;
+  complete: (address?: `0x${string}`) => Promise<void>;
+}
+export function CreateForm({
+  config,
+  ensure,
+  prices,
+  complete,
+  initialCurator,
+}: { prices: PriceSnapshot | null; initialCurator: `0x${string}` } & Shared) {
+  const { busy, run, progress } = useTools(),
+    [name, setName] = useState("Magnificent Seven"),
+    [symbol, setSymbol] = useState("MAG7"),
+    [curator, setCurator] = useState<string>(
+      config.curatorAddress ?? initialCurator
+    ),
+    [usd, setUsd] = useState("1000"),
+    [seeds, setSeeds] = useState(config.assets.map(() => "0")),
+    [done, setDone] = useState(false),
+    [pending, setPending] = useState(false);
+  const draft = useRef<Draft | null>(null);
+
+  const fresh =
+    !!prices &&
+    Object.values(prices.values).every(
+      (p) => Date.now() / 1000 - p.updatedAt <= config.priceMaxAgeSeconds
+    );
+  function suggest() {
+    if (!prices || !fresh) return;
+    try {
+      const value = units(usd, 8);
+      setSeeds(
+        config.assets.map((a) =>
+          decimal(
+            (value * BigInt(a.weight) * 10n ** BigInt(a.decimals)) /
+              100n /
+              BigInt(prices.values[a.address.toLowerCase()].usd),
+            a.decimals,
+            a.decimals
+          )
+        )
+      );
+    } catch (e) {
+      progress(errorText(e));
+    }
+  }
+  async function submit() {
+    const w = await ensure();
+    if (!draft.current) {
+      if (!config.factory)
+        throw Error("Deploy and configure the demo factory first");
+      const amounts = config.assets.map((a, i) => units(seeds[i], a.decimals));
+      if (amounts.some((n) => n < 1000000n))
+        throw Error(
+          "Every seed must meet the pool minimum of 1,000,000 raw units"
+        );
+      const address = getAddress(curator.trim());
+      if (address === zeroAddress) throw Error("Curator cannot be zero");
+      if (!name.trim() || !symbol.trim())
+        throw Error("Pool name and symbol required");
+      for (let i = 0; i < config.assets.length; i++)
+        if (
+          (await w.publicClient.readContract({
+            address: config.assets[i].address,
+            abi: tokenAbi,
+            functionName: "balanceOf",
+            args: [w.account],
+          })) < amounts[i]
+        )
+          throw Error("Insufficient " + config.assets[i].symbol);
+      draft.current = {
+        chainId: config.chainId,
+        factory: config.factory,
+        creator: w.account,
+        requestId: requestId(),
+        name: name.trim(),
+        symbol: symbol.trim(),
+        curator: address,
+        feeBps: config.curatorFeeBps,
+        seedAmounts: amounts.map(String),
+      };
+      savePool(draft.current);
+      setPending(true);
+    }
+    const address = await w.initialize(draft.current, progress);
+    setDone(true);
+    await complete(address);
+  }
+  return (
+    <>
+      <p className="note">
+        Folio weights · {config.curatorFeeBps / 100}% curator share of surplus ·
+        3-minute orders. Creation stays in this browser. Automated rebalancing
+        requires separate registration. Setup requires several wallet
+        transactions.
+      </p>
+      <fieldset disabled={pending || busy}>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="new-name">Pool name</label>
+            <input
+              id="new-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={64}
+            />
+          </div>
+          <div>
+            <label htmlFor="new-symbol">LP symbol</label>
+            <input
+              id="new-symbol"
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              maxLength={12}
+            />
+          </div>
+        </div>
+        <label htmlFor="new-curator">Curator address</label>
+        <input
+          id="new-curator"
+          value={curator}
+          onChange={(e) => setCurator(e.target.value)}
+        />
+        <label htmlFor="seed-usd">Suggest seed amounts from USD value</label>
+        <div className="flex gap-3">
+          <input
+            id="seed-usd"
+            inputMode="decimal"
+            value={usd}
+            onChange={(e) => setUsd(e.target.value)}
+          />
+          <button
+            id="suggest"
+            className="button secondary shrink-0"
+            disabled={!fresh}
+            onClick={suggest}
+          >
+            Use cached prices
+          </button>
+        </div>
+        {config.assets.map((a, i) => (
+          <div key={a.address}>
+            <label htmlFor={"seed-" + i}>
+              {a.symbol} · {a.weight}% target
+            </label>
+            <input
+              id={"seed-" + i}
+              inputMode="decimal"
+              value={seeds[i]}
+              onChange={(e) =>
+                setSeeds((old) =>
+                  old.map((n, j) => (j === i ? e.target.value : n))
+                )
+              }
+            />
+          </div>
+        ))}
+      </fieldset>
+      <button
+        id="create-confirm"
+        className="button primary mt-5 w-full"
+        disabled={busy || done}
+        onClick={() => run(submit)}
+      >
+        {done
+          ? "Pool initialized"
+          : pending
+          ? "Resume initialization"
+          : "Create and initialize"}
+      </button>
+    </>
+  );
+}
+export function InitializeForm({
+  draft,
+  ensure,
+  complete,
+}: Pick<Shared, "ensure" | "complete"> & { draft: Draft }) {
+  const { busy, run, progress } = useTools(),
+    [done, setDone] = useState(false);
+  return (
+    <>
+      <p className="note">
+        Resume the stored request. On-chain reads determine which tokens need
+        binding. Previously successful transactions are not repeated.
+      </p>
+      <button
+        id="initialize-confirm"
+        className="button primary mt-5 w-full"
+        disabled={busy || done}
+        onClick={() =>
+          run(async () => {
+            const w = await ensure();
+            const address = await w.initialize(draft, progress);
+            setDone(true);
+            await complete(address);
+          })
+        }
+      >
+        Continue setup
+      </button>
+    </>
+  );
+}
+export function ImportForm({
+  config,
+  complete,
+}: Pick<Shared, "config" | "complete">) {
+  const { busy, run } = useTools(),
+    [input, setInput] = useState("");
+  return (
+    <>
+      <p className="note">
+        Adds a pool to this browser only. It does not publish the pool or enroll
+        it with the curator.
+      </p>
+      <label htmlFor="pool-address">Pool address</label>
+      <input
+        id="pool-address"
+        value={input}
+        placeholder="0x…"
+        onChange={(e) => setInput(e.target.value)}
+      />
+      <button
+        id="save-pool"
+        className="button primary mt-5 w-full"
+        disabled={busy}
+        onClick={() =>
+          run(async () => {
+            const address = getAddress(input.trim());
+            const p = await api<PoolSnapshot>("/api/pool?address=" + address);
+            savePool({ chainId: config.chainId, address, name: p.name });
+            await complete(address);
+          })
+        }
+      >
+        Validate and save locally
+      </button>
+    </>
+  );
+}
+interface Preview {
+  snapshot: PoolSnapshot;
+  shares: bigint;
+  amounts: bigint[];
+  bounds: bigint[];
+  account: `0x${string}`;
+}
+export function LiquidityForm({
+  pool,
+  mode,
+  config,
+  ensure,
+  complete,
+}: Shared & { pool: PoolSnapshot; mode: "deposit" | "withdraw" }) {
+  const { busy, run, progress } = useTools(),
+    [amount, setAmount] = useState("1"),
+    [preview, setPreview] = useState<Preview | null>(null),
+    [calculating, setCalculating] = useState(false);
+  const deposit = mode === "deposit";
+  const generation = useRef(0);
+  async function calculate() {
+    const version = ++generation.current;
+    setPreview(null);
+    setCalculating(true);
+    try {
+      const w = await ensure(),
+        s = await api<PoolSnapshot>(
+          "/api/pool?address=" + pool.address + "&wallet=" + w.account
+        );
+      const shares = units(amount, 18);
+      if (!deposit && shares > BigInt(s.walletShares))
+        throw Error("Insufficient LP shares");
+      const amounts = liquidityAmounts(
+        s.tokens.map((t) => BigInt(t.balance)),
+        shares,
+        BigInt(s.supply)
+      );
+      const bounds = amounts.map((a) =>
+        deposit
+          ? (a * BigInt(10000 + config.slippageBps) + 9999n) / 10000n
+          : (a * BigInt(10000 - config.slippageBps)) / 10000n
+      );
+      if (
+        deposit &&
+        s.tokens.some((t, i) => BigInt(t.walletBalance ?? "0") < bounds[i])
+      )
+        throw Error(
+          "Your wallet needs all seven amounts, including the configured movement buffer"
+        );
+      if (version === generation.current)
+        setPreview({
+          snapshot: s,
+          shares,
+          amounts,
+          bounds,
+          account: w.account,
+        });
+    } catch (e) {
+      if (version === generation.current) progress(errorText(e));
+    } finally {
+      if (version === generation.current) setCalculating(false);
+    }
+  }
+  useEffect(() => {
+    void calculate();
+    return () => {
+      generation.current++;
+    };
+  }, []);
+  async function submit() {
+    if (!preview) throw Error("Refresh the preview first");
+    const w = await ensure();
+    if (w.account.toLowerCase() !== preview.account.toLowerCase())
+      throw Error("Wallet account changed. Refresh the preview.");
+    const { snapshot: s, bounds, shares } = preview;
+    if (deposit)
+      for (let i = 0; i < s.tokens.length; i++) {
+        const t = s.tokens[i];
+        if (
+          (await w.publicClient.readContract({
+            address: t.address,
+            abi: tokenAbi,
+            functionName: "allowance",
+            args: [w.account, s.address],
+          })) < bounds[i]
+        )
+          await w.send(
+            t.address,
+            tokenAbi,
+            "approve",
+            [s.address, bounds[i]],
+            "Approve " + t.symbol,
+            progress
+          );
+      }
+    await w.send(
+      s.address,
+      poolAbi,
+      deposit ? "joinPool" : "exitPool",
+      [shares, bounds],
+      deposit ? "Deposit all seven assets" : "Withdraw all seven assets",
+      progress
+    );
+    setPreview(null);
+    progress("Confirmed. Your position has been refreshed.");
+    await complete();
+  }
+  return (
+    <>
+      <p className="note">
+        {deposit
+          ? "Bring all seven assets. Deposits follow current reserves, which may differ from target weights."
+          : "Receive all seven constituent tokens in current reserve proportions."}{" "}
+        Amount bounds allow {config.slippageBps / 100}% reserve movement;
+        otherwise the transaction reverts.
+      </p>
+      <label htmlFor="lp-amount">
+        {pool.symbol} shares {deposit ? "to receive" : "to redeem"}
+      </label>
+      <input
+        id="lp-amount"
+        inputMode="decimal"
+        value={amount}
+        onChange={(e) => {
+          generation.current++;
+          setCalculating(false);
+          setAmount(e.target.value);
+          setPreview(null);
+        }}
+      />
+      <div id="liquidity-preview">
+        {preview?.snapshot.tokens.map((t, i) => (
+          <div
+            key={t.address}
+            className="flex justify-between gap-4 border-b border-line py-3 text-right text-sm"
+          >
+            <span className="text-left">
+              {t.symbol}
+              <small>
+                Wallet {decimal(t.walletBalance ?? "0", t.decimals, 5)}
+              </small>
+            </span>
+            <span>
+              {decimal(preview.amounts[i], t.decimals, 6)}
+              <small>
+                {deposit ? "Maximum" : "Minimum"}{" "}
+                {decimal(preview.bounds[i], t.decimals, 6)}
+              </small>
+            </span>
+          </div>
+        ))}
+      </div>
+      <button
+        id="preview"
+        className="button secondary mt-4 w-full"
+        disabled={busy || calculating}
+        onClick={() => void calculate()}
+      >
+        {calculating ? "Reading current reserves…" : "Refresh preview"}
+      </button>
+      <button
+        id="liquidity-confirm"
+        className="button primary mt-3 w-full"
+        disabled={busy || !preview}
+        onClick={() => run(submit)}
+      >
+        {deposit ? "Approve and deposit" : "Withdraw tokens"}
+      </button>
+    </>
+  );
+}
+export function RecoverForm({
+  pool,
+  ensure,
+  complete,
+}: Pick<Shared, "ensure" | "complete"> & { pool: PoolSnapshot }) {
+  const { busy, run, progress } = useTools();
+  return (
+    <>
+      <p className="note">
+        Unbinds each seed token back to the controller wallet. Available only
+        before finalization.
+      </p>
+      <button
+        id="recover-confirm"
+        className="button secondary mt-5 w-full"
+        disabled={busy}
+        onClick={() =>
+          run(async () => {
+            const w = await ensure(),
+              p = w.publicClient;
+            if (
+              await p.readContract({
+                address: pool.address,
+                abi: poolAbi,
+                functionName: "isFinalized",
+              })
+            )
+              throw Error("Pool already finalized; use Withdraw instead");
+            if (
+              (
+                await p.readContract({
+                  address: pool.address,
+                  abi: poolAbi,
+                  functionName: "getController",
+                })
+              ).toLowerCase() !== w.account.toLowerCase()
+            )
+              throw Error("Connect the controller wallet");
+            for (const token of await p.readContract({
+              address: pool.address,
+              abi: poolAbi,
+              functionName: "getCurrentTokens",
+            }))
+              await w.send(
+                pool.address,
+                poolAbi,
+                "unbind",
+                [token],
+                "Recover " + token,
+                progress
+              );
+            progress(
+              "Seeded assets recovered. You may resume initialization later."
+            );
+            await complete();
+          })
+        }
+      >
+        Unbind seeded tokens
+      </button>
+    </>
+  );
+}
+export function CuratorForm({
+  pool,
+  ensure,
+  complete,
+}: Pick<Shared, "ensure" | "complete"> & { pool: PoolSnapshot }) {
+  const { busy, run, progress } = useTools(),
+    [input, setInput] = useState("");
+  return (
+    <>
+      <p className="note">
+        Only the immutable creator can replace the signer. Old signatures stop
+        validating. The new address is not automatically enrolled with a
+        service.
+      </p>
+      <label htmlFor="curator-address">New curator address</label>
+      <input
+        id="curator-address"
+        placeholder="0x…"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+      />
+      <button
+        id="curator-confirm"
+        className="button primary mt-5 w-full"
+        disabled={busy}
+        onClick={() =>
+          run(async () => {
+            if (
+              !isAddress(input.trim()) ||
+              getAddress(input.trim()) === zeroAddress
+            )
+              throw Error("Enter a nonzero curator address");
+            const w = await ensure();
+            await w.send(
+              pool.address,
+              poolAbi,
+              "setCurator",
+              [getAddress(input.trim())],
+              "Replace curator",
+              progress
+            );
+            progress("Curator replaced.");
+            await complete();
+          })
+        }
+      >
+        Replace curator
+      </button>
+    </>
+  );
+}

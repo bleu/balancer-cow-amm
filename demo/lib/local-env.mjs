@@ -1,4 +1,4 @@
-import { ASSETS, lower } from "../public/shared.mjs";
+import { ASSETS, lower } from "./shared.mjs";
 // Only public fixture configuration is written; wallet private keys are never exported.
 export function localFixtureEnv(state, rpcUrl, curatorAddress) {
   const assets = state.tokens.map((t, i) => ({

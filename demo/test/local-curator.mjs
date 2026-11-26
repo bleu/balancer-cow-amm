@@ -4,7 +4,7 @@ import { ethers } from "ethers";
 import { loadConfig } from "../lib/config.mjs";
 import { Chain } from "../lib/chain.mjs";
 import { Curator } from "../lib/curator.mjs";
-import { portfolio, nextPair, USD, lower } from "../public/shared.mjs";
+import { portfolio, nextPair, USD, lower } from "../lib/shared.mjs";
 const c = loadConfig();
 assert.equal(c.localDev, true);
 assert.ok([31337, 31338].includes(c.chainId));

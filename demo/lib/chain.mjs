@@ -6,7 +6,7 @@ import {
   ASSETS,
   lower,
   ESCROW_ABI,
-} from "../public/shared.mjs";
+} from "./shared.mjs";
 export class Chain {
   constructor(config) {
     this.config = config;

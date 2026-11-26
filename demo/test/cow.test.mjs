@@ -7,7 +7,7 @@ import {
   hashOrder,
   buildAppData,
 } from "../../script/local/curated-order.mjs";
-import { ASSETS, ZERO } from "../public/shared.mjs";
+import { ASSETS, ZERO } from "../lib/shared.mjs";
 test("API payload strips settlement owner prefix, retains canonical hooks and zero fee", async () => {
   const signer = new ethers.Wallet("0x" + "11".repeat(32));
   const address = "0x0000000000000000000000000000000000000022",

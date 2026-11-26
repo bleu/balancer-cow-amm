@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { ethers } from "ethers";
 import { loadConfig, publicConfig } from "../lib/config.mjs";
 import { localFixtureEnv, serializeEnv } from "../lib/local-env.mjs";
-import { ASSETS } from "../public/shared.mjs";
+import { ASSETS } from "../lib/shared.mjs";
 const address = "0x0000000000000000000000000000000000000011";
 test("Defaults and the example env start in read-only Base setup mode", () => {
   const defaults = loadConfig({});

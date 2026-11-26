@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { Curator } from "../lib/curator.mjs";
-import { ASSETS, BONE, USD, lower } from "../public/shared.mjs";
+import { ASSETS, BONE, USD, lower } from "../lib/shared.mjs";
 function fixture() {
   let time = 1000,
     posts = 0,
