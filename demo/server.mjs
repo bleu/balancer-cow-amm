@@ -213,8 +213,7 @@ async function main() {
   };
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);
-  const port = Number(process.env.DEMO_PORT ?? 3000);
-  const host = process.env.DEMO_HOST ?? "127.0.0.1";
+  const { port, host } = config;
   app.server.listen(port, host, () => {
     console.log(
       `MAG7 demo: http://${host}:${port} (${
@@ -228,9 +227,7 @@ if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
 )
-  main().catch(() => {
-    console.error(
-      "Demo startup failed; check config, RPC and server-only key settings."
-    );
+  main().catch((error) => {
+    console.error("Demo startup failed: " + safeReason(error));
     process.exitCode = 1;
   });

@@ -49,8 +49,8 @@ export class Prices {
       url.searchParams.set("include_last_updated_at", "true");
       url.searchParams.set("precision", "full");
       const options = {
-        headers: process.env.COINGECKO_API_KEY
-          ? { "x-cg-demo-api-key": process.env.COINGECKO_API_KEY }
+        headers: c.coingeckoApiKey
+          ? { "x-cg-demo-api-key": c.coingeckoApiKey }
           : {},
       };
       let raw;

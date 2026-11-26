@@ -6,22 +6,29 @@ const config = { intervalSeconds: 3600, priceMaxAgeSeconds: 1800 };
 test("One batched request per hour, callers share cache, freshness checked separately", async () => {
   let calls = 0,
     now = 10000000;
-  const prices = new Prices(config, {
-    now: () => now,
-    request: async (url) => {
-      calls++;
-      assert.equal(
-        new URL(url).searchParams.get("contract_addresses").split(",").length,
-        7
-      );
-      return Object.fromEntries(
-        ASSETS.map((a) => [
-          lower(a.address),
-          { usd: 100, last_updated_at: 10000 },
-        ])
-      );
-    },
-  });
+  const prices = new Prices(
+    { ...config, coingeckoApiKey: "test-env-price-key" },
+    {
+      now: () => now,
+      request: async (url, options) => {
+        assert.equal(
+          options.headers["x-cg-demo-api-key"],
+          "test-env-price-key"
+        );
+        calls++;
+        assert.equal(
+          new URL(url).searchParams.get("contract_addresses").split(",").length,
+          7
+        );
+        return Object.fromEntries(
+          ASSETS.map((a) => [
+            lower(a.address),
+            { usd: 100, last_updated_at: 10000 },
+          ])
+        );
+      },
+    }
+  );
   const [a, b] = await Promise.all([prices.get(), prices.get()]);
   assert.equal(a, b);
   assert.equal(calls, 1);
