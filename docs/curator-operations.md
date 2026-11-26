@@ -45,9 +45,9 @@ Only the curator can raise `minEpoch` using `revoke`. Only the immutable creator
 forge test --match-path 'test/unit/**'
 forge test --match-path 'test/local/**'
 forge test --match-contract BCoWPoolIsValidSignature --match-test test_HookGasEightTokens -vv
-npm run local:chain  # separate terminal
-npm run local:demo
-npm run test:local:curator  # fee, curator replacement, revoke and withdrawal
+pnpm run local:chain  # separate terminal
+pnpm run local:demo
+pnpm run test:local:curator  # fee, curator replacement, revoke and withdrawal
 ```
 
 Unit tests that directly call both hooks must keep those calls in the same transaction: do not use Foundry's `--isolate` for those unit tests. Real-settlement integration tests keep both hooks within one `settle` call and support isolation.

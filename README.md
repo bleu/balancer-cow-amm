@@ -8,11 +8,13 @@ Balancer is based on an N-dimensional invariant surface which is a generalizatio
 
 Most users will want to consume the ABI definitions for BPool, BCoWPool, BFactory and BCoWFactory.
 
+Use Node 22.9+ and pnpm 10. The repository pins Node for asdf and pnpm through `packageManager`. Run `pnpm install --frozen-lockfile` before development, followed by `pnpm prepare` to install Git hooks. Dependency lifecycle scripts are disabled because Foundry consumes the pinned Solidity sources directly.
+
 This project follows the standard Foundry project structure. 
 
 ```
-yarn build   # build artifacts to `out/`
-yarn test    # run the tests
+pnpm build   # build artifacts to `out/`
+pnpm test    # run the tests
 ```
 
 ## Changes on BPool from [Balancer V1](https://github.com/balancer/balancer-core)
@@ -56,15 +58,15 @@ See [the design](docs/curated-standing-orders.md) and [curator operations and mi
 
 ## Local seven-asset settlement
 
-Run `npm run local:chain` in one terminal and `npm run local:demo` in another. This deploys CoW settlement and authentication, registers a local solver, creates an M7 portfolio, and executes and verifies signed orders on Anvil. No mainnet fork or submodule is required.
+Run `pnpm run local:chain` in one terminal and `pnpm run local:demo` in another. This deploys CoW settlement and authentication, registers a local solver, creates an M7 portfolio, and executes and verifies signed orders on Anvil. No mainnet fork or submodule is required.
 
-Run `npm run test:local:auction` with Anvil running to compare a funded local solver auction against ordinary weighted-AMM arbitrage. It exports JSON/CSV accounting reports and supports independent historical-state verification with `npm run local:auction:verify`. See [the auction methodology](docs/local-auction.md) for assumptions and limits.
+Run `pnpm run test:local:auction` with Anvil running to compare a funded local solver auction against ordinary weighted-AMM arbitrage. It exports JSON/CSV accounting reports and supports independent historical-state verification with `pnpm run local:auction:verify`. See [the auction methodology](docs/local-auction.md) for assumptions and limits.
 
-Run `npm run test:local:protection` with Anvil running to verify proportional deposits/withdrawals before and after CoW settlement at the protective direct-swap fee.
+Run `pnpm run test:local:protection` with Anvil running to verify proportional deposits/withdrawals before and after CoW settlement at the protective direct-swap fee.
 
-Run `npm run test:local:rebalance` with Anvil running to deploy a fresh pool and verify progressive rebalancing through separate settlements.
+Run `pnpm run test:local:rebalance` with Anvil running to deploy a fresh pool and verify progressive rebalancing through separate settlements.
 
-See [the local M7 walkthrough](docs/local-m7.md) for prerequisites, commands, verification, and scope. Run `npm run test:local:settlement` for the corresponding tests without Anvil or an external RPC.
+See [the local M7 walkthrough](docs/local-m7.md) for prerequisites, commands, verification, and scope. Run `pnpm run test:local:settlement` for the corresponding tests without Anvil or an external RPC.
 
 ## Creating a Pool
 - Create a new pool by calling the corresponding pool factory:

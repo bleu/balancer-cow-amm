@@ -16,6 +16,9 @@ interface IBCoWFactory is IBFactory {
    */
   error BCoWFactory_NotValidBCoWPool();
 
+  /// @notice A creator has already used this request ID.
+  error CreationRequestAlreadyUsed();
+
   /**
    * @notice Emits the COWAMMPoolCreated event if the caller is a bCoWPool, to be indexed by off-chain agents
    */
@@ -34,6 +37,15 @@ interface IBCoWFactory is IBFactory {
   // solhint-disable-next-line style-guide-casing
   function HOOKS_TRAMPOLINE() external view returns (address);
 
+  /// @notice Recovers a UI-created pool without reading events.
+  /// @param creator Wallet that submitted the creation.
+  /// @param requestId Browser-generated unique creation ID.
+  /// @return pool Created pool, or zero if the request never succeeded.
+  function createdPool(
+    address creator,
+    bytes32 requestId
+  ) external view returns (address pool);
+
   /// @notice Deploys a pool with custom curator settings; caller is the immutable creator.
   /// @param name LP token name.
   /// @param symbol LP token symbol.
@@ -42,6 +54,22 @@ interface IBCoWFactory is IBFactory {
   /// @param feeBps Share of limit surplus, in basis points.
   /// @return pool Newly deployed pool.
   function newBPool(
+    string memory name,
+    string memory symbol,
+    address curator,
+    uint32 duration,
+    uint16 feeBps
+  ) external returns (IBPool pool);
+  /// @notice Creates a recoverable pool with the caller as creator/controller.
+  /// @param requestId Unique ID persisted by the browser before submitting.
+  /// @param name LP token name.
+  /// @param symbol LP token symbol.
+  /// @param curator Initial signing address.
+  /// @param duration Maximum order lifetime in seconds.
+  /// @param feeBps Curator's share of limit surplus in basis points.
+  /// @return pool Created pool.
+  function createPool(
+    bytes32 requestId,
     string memory name,
     string memory symbol,
     address curator,
