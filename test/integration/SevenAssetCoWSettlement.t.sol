@@ -192,6 +192,10 @@ abstract contract SevenAssetSettlementChecks is Test {
   ) internal {
     Batch memory batch = _prepareBatch(includeCommitment);
     uint256 invariantBefore = _pairInvariant(batch.sellIndex, batch.buyIndex);
+    uint256[] memory settlementBefore = new uint256[](7);
+    for (uint256 i; i < 7; ++i) {
+      settlementBefore[i] = tokens[i].balanceOf(address(settlement));
+    }
     if (sender != solver) vm.expectRevert(bytes('GPv2: not a solver'));
     else if (!includeCommitment) vm.expectRevert(IBCoWPool.OrderDoesNotMatchCommitmentHash.selector);
     vm.prank(sender, sender);
@@ -203,7 +207,7 @@ abstract contract SevenAssetSettlementChecks is Test {
       if (i == batch.sellIndex) expected -= batch.order.sellAmount;
       if (i == batch.buyIndex) expected += batch.received;
       assertEq(tokens[i].balanceOf(address(pool)), expected);
-      assertEq(tokens[i].balanceOf(address(settlement)), 0);
+      assertEq(tokens[i].balanceOf(address(settlement)), settlementBefore[i]);
     }
     assertEq(pool.totalSupply(), supplyBefore);
     assertEq(pool.balanceOf(address(this)), lpSharesBefore);
@@ -215,7 +219,7 @@ abstract contract SevenAssetSettlementChecks is Test {
 
   function _prepareBatch(
     bool includeCommitment
-  ) internal returns (Batch memory batch) {
+  ) internal virtual returns (Batch memory batch) {
     GPv2Interaction.Data[] memory pre;
     bytes memory poolSig;
     (batch.order, pre,, poolSig) = helper.order(address(pool), prices);
@@ -279,11 +283,18 @@ abstract contract SevenAssetSettlementChecks is Test {
     counterOrder.buyAmount = batch.order.sellAmount;
     counterOrder.partiallyFillable = false;
     (uint8 v, bytes32 r, bytes32 s) = vm.sign(TRADER_KEY, counterOrder.hash(settlement.domainSeparator()));
-    SevenAssetSettlementToken(address(counterOrder.sellToken)).mint(trader, batch.received);
+    _fundCounterparty(counterOrder.sellToken, batch.received);
     address relayer = settlement.vaultRelayer();
     vm.prank(trader);
     counterOrder.sellToken.approve(relayer, batch.received);
     return _trade(counterOrder, batch.buyIndex, batch.sellIndex, GPv2Signing.Scheme.Eip712, abi.encodePacked(r, s, v));
+  }
+
+  function _fundCounterparty(
+    IERC20 token,
+    uint256 amount
+  ) internal virtual {
+    SevenAssetSettlementToken(address(token)).mint(trader, amount);
   }
 
   function _trade(

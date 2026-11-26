@@ -233,8 +233,8 @@ export function Demo({ config }: { config: DemoConfig }) {
         </nav>
         {config.localDev && (
           <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-            Local synthetic-token fixture. This is not a funded Base pool or
-            production CoW execution.
+            Local synthetic-token fixture. This is not a funded production pool
+            or production CoW execution.
           </div>
         )}
         {notice && (
@@ -285,7 +285,7 @@ export function Demo({ config }: { config: DemoConfig }) {
       </main>
       <footer className="mx-auto flex max-w-6xl flex-wrap justify-between gap-3 border-t border-line px-5 py-7 text-[10px] text-slate-500 md:px-10">
         <span>folio / an on-chain portfolio experiment</span>
-        <span>Base · CoW Protocol · No indexer</span>
+        <span>{config.name} · CoW Protocol · No indexer</span>
       </footer>
       {modal && (
         <Dialog key={modal.kind} title={title} onClose={() => setModal(null)}>
@@ -361,7 +361,7 @@ function Catalog({
             <h2 className="text-xl font-semibold">
               {config.factory
                 ? "Your first basket starts here."
-                : "Ready for a Base deployment."}
+                : `Ready for a ${config.name} deployment.`}
             </h2>
             <p className="note mt-3">
               {config.factory

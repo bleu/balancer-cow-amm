@@ -39,6 +39,9 @@ export interface Draft extends SavedPool {
 export interface DemoConfig {
   chainId: number;
   name: string;
+  publicRpcUrl: string;
+  nativeCurrency: { name: string; symbol: string; decimals: 18 };
+  confirmations: number;
   explorerUrl: string;
   factory: Address | null;
   pools: PoolEntry[];

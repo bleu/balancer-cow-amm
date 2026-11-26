@@ -32,14 +32,10 @@ function WalletProvider({ config }: { config: DemoConfig }) {
     const chain = defineChain({
       id: config.chainId,
       name: config.name,
-      nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+      nativeCurrency: config.nativeCurrency,
       rpcUrls: {
         default: {
-          http: [
-            config.localDev
-              ? "http://127.0.0.1:8546"
-              : "https://mainnet.base.org",
-          ],
+          http: [config.publicRpcUrl],
         },
       },
       ...(config.explorerUrl

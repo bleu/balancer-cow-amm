@@ -3,7 +3,6 @@ import {
   POOL_ABI,
   FACTORY_ABI,
   TOKEN_ABI,
-  ASSETS,
   lower,
   ESCROW_ABI,
 } from "./shared.mjs";
@@ -37,7 +36,7 @@ export class Chain {
     const addresses = await p[
       finalized ? "getFinalTokens" : "getCurrentTokens"
     ](opt);
-    const preset = c.localAssets ?? ASSETS;
+    const preset = c.assets;
     const tokens = await Promise.all(
       addresses.map(async (a) => {
         const token = new ethers.Contract(a, TOKEN_ABI, this.provider);

@@ -7,7 +7,7 @@ import { Chain } from "./lib/chain.mjs";
 import { Prices } from "./lib/prices.mjs";
 import { Cow } from "./lib/cow.mjs";
 import { Curator, safeReason } from "./lib/curator.mjs";
-import { ASSETS, lower, USD } from "./lib/shared.mjs";
+import { lower, USD } from "./lib/shared.mjs";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const json = (res, status, data) => {
   res.writeHead(status, {
@@ -55,7 +55,7 @@ export function createApp(
       if (url.pathname === "/api/config")
         return json(res, 200, {
           ...publicConfig(config),
-          assets: config.localAssets ?? ASSETS,
+          assets: config.assets,
         });
       if (url.pathname === "/api/status")
         return json(res, 200, {
