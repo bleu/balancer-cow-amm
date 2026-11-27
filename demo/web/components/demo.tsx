@@ -344,7 +344,7 @@ function Catalog({
         <div className="hero-copy">
           <p className="eyebrow">ONCHAIN BASKETS. A WATCHFUL EYE.</p>
           <h1>
-            Invest in a basket.
+            Set a portfolio.
             <br />
             <em>Warden watches it.</em>
           </h1>

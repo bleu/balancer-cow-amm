@@ -8,7 +8,7 @@ const manrope = localFont({
   weight: "400 800",
 });
 export const metadata: Metadata = {
-  title: "Warden — Invest in a basket. Warden watches it.",
+  title: "Warden — Set a portfolio. Warden watches it.",
   description:
     "Explore onchain baskets, see every asset, and follow your curator. Warden brings your portfolio into view.",
   icons: { icon: "/warden-eye.svg" },

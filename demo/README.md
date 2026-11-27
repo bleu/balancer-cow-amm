@@ -1,6 +1,6 @@
 # Warden: MAG7 baskets on BNB Chain and Base
 
-**Invest in a basket. Warden watches it.**
+**Set a portfolio. Warden watches it.**
 
 A wallet frontend and a single-process curator service for the [demo plan](../docs/base-mag7-demo.md). Defaults to production CoW on BNB Chain with Ondo stocks; explicit Base configuration retains the native B20 preset. The default configuration displays setup instructions: no funded Base factory or pool is bundled.
 

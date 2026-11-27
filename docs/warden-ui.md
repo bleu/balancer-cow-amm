@@ -1,6 +1,6 @@
 # Warden visual identity
 
-**Invest in a basket. Warden watches it.**
+**Set a portfolio. Warden watches it.**
 
 Warden is the app identity for the existing weighted-pool demo. The basket brings the assets together; the eye represents visibility into holdings and the curator's work. The interface makes that promise concrete by keeping balances, allocations, target weights and service status in view.
 
