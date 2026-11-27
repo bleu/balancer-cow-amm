@@ -8,13 +8,15 @@ import {
 import { createConfig, WagmiProvider, injected } from "wagmi";
 import { custom, defineChain } from "viem";
 import { api } from "../lib/api";
+import { withFrontendPools } from "../lib/frontend-pools";
 import type { DemoConfig } from "../lib/types";
 import { Demo } from "./demo";
 import { EyeMark } from "./brand";
 function ConfiguredApp() {
   const query = useQuery({
     queryKey: ["config"],
-    queryFn: () => api<DemoConfig>("/api/config"),
+    queryFn: async () =>
+      withFrontendPools(await api<DemoConfig>("/api/config")),
     staleTime: Infinity,
   });
   return query.data ? (
