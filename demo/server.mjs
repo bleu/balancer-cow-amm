@@ -7,6 +7,7 @@ import { Chain } from "./lib/chain.mjs";
 import { Prices } from "./lib/prices.mjs";
 import { Cow } from "./lib/cow.mjs";
 import { Curator, safeReason } from "./lib/curator.mjs";
+import { createServerShutdown } from "./lib/shutdown.mjs";
 import { lower, USD } from "./lib/shared.mjs";
 const root = path.dirname(fileURLToPath(import.meta.url));
 const json = (res, status, data) => {
@@ -140,6 +141,7 @@ async function main() {
   });
   await web.prepare();
   const app = createApp(config, { pageHandler: web.getRequestHandler() });
+  const closeServer = createServerShutdown(app.server, () => web.close());
   if (config.localDev && config.fixturePrices) {
     app.prices.get = async () =>
       (app.prices.cache = {
@@ -191,10 +193,24 @@ async function main() {
   let timer;
   process.on("SIGUSR2", () => app.worker.pause());
   const stop = () => {
+    if (stopped) return;
     stopped = true;
     clearTimeout(timer);
     app.worker.paused = true;
-    app.server.close(() => web.close());
+    // In-flight upstream requests and development watchers must not retain the
+    // process (and Next's dev lock) after the HTTP/Next cleanup completes.
+    const timeout = setTimeout(() => process.exit(1), 5000);
+    timeout.unref();
+    closeServer().then(
+      () => {
+        clearTimeout(timeout);
+        process.exit(0);
+      },
+      (error) => {
+        console.error("Demo shutdown failed: " + safeReason(error));
+        process.exit(1);
+      }
+    );
   };
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);
