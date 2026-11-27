@@ -1,4 +1,6 @@
-# MAG7 demo: BNB Chain and Base
+# Warden: MAG7 baskets on BNB Chain and Base
+
+**Invest in a basket. Warden watches it.**
 
 A wallet frontend and a single-process curator service for the [demo plan](../docs/base-mag7-demo.md). Defaults to production CoW on BNB Chain with Ondo stocks; explicit Base configuration retains the native B20 preset. The default configuration displays setup instructions: no funded Base factory or pool is bundled.
 
@@ -19,6 +21,8 @@ pnpm demo:start                   # loads .env
 ```
 
 `pnpm demo:typecheck` checks the frontend without emitting JavaScript. Next build output and generated types are ignored in `demo/web/.next`.
+
+See [the Warden visual direction](../docs/warden-ui.md) for the eye identity, palette, page layouts and preserved pool information. The redesign uses the same configuration and `pnpm dev` command.
 
 ## Local demo
 

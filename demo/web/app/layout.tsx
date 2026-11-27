@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import "./globals.css";
+const manrope = localFont({
+  src: "../public/fonts/manrope-latin.woff2",
+  variable: "--font-warden",
+  display: "swap",
+  weight: "400 800",
+});
 export const metadata: Metadata = {
-  title: "Folio / MAG7 CoW AMM",
-  description: "Explore and manage a curated MAG7 basket on BNB Chain or Base.",
-  icons: { icon: "data:," },
+  title: "Warden — Invest in a basket. Warden watches it.",
+  description:
+    "Explore onchain baskets, see every asset, and follow your curator. Warden brings your portfolio into view.",
+  icons: { icon: "/warden-eye.svg" },
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={manrope.variable}>{children}</body>
     </html>
   );
 }

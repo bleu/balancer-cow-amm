@@ -12,6 +12,7 @@ import { decimal, liquidityAmounts, units } from "../../lib/shared.mjs";
 import { api, errorText } from "../lib/api";
 import { savePool } from "../lib/catalog";
 import { poolAbi, requestId, tokenAbi, type PoolActions } from "../lib/wallet";
+import { EyeMark } from "./brand";
 import type {
   DemoConfig,
   Draft,
@@ -67,8 +68,11 @@ export function Dialog({
         e.preventDefault();
         if (!busy) onClose();
       }}
-      className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-auto rounded-2xl border border-line bg-white p-6 text-ink shadow-xl backdrop:bg-ink/35"
+      className="warden-dialog fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%_-_2rem)] max-w-xl overflow-auto border text-ink"
     >
+      <p className="dialog-eyebrow">
+        <EyeMark /> WARDEN / YOUR BASKET
+      </p>
       <div className="mb-5 flex items-start justify-between gap-4">
         <h2 className="text-xl font-semibold">{title}</h2>
         <button
@@ -196,8 +200,8 @@ export function CreateForm({
   return (
     <>
       <p className="note">
-        Folio weights · {config.curatorFeeBps / 100}% curator share of surplus ·
-        3-minute orders. Creation stays in this browser. Automated rebalancing
+        Preset weights · {config.curatorFeeBps / 100}% curator share of surplus
+        · 3-minute orders. Creation stays in this browser. Automated rebalancing
         requires separate registration. Setup requires several wallet
         transactions.
       </p>
