@@ -10,6 +10,7 @@ import { custom, defineChain } from "viem";
 import { api } from "../lib/api";
 import type { DemoConfig } from "../lib/types";
 import { Demo } from "./demo";
+import { EyeMark } from "./brand";
 function ConfiguredApp() {
   const query = useQuery({
     queryKey: ["config"],
@@ -19,8 +20,11 @@ function ConfiguredApp() {
   return query.data ? (
     <WalletProvider config={query.data} />
   ) : (
-    <main className="mx-auto max-w-6xl p-10">
-      <h1 className="text-3xl font-semibold">Folio / MAG7</h1>
+    <main className="loading-shell">
+      <a href="#" className="brand" aria-label="Warden home">
+        <EyeMark className="brand-mark" />
+        <span className="wordmark">warden</span>
+      </a>
       <p role="status" className="mt-5">
         {query.error?.message ?? "Loading pool configuration…"}
       </p>
