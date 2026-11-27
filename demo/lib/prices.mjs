@@ -1,5 +1,6 @@
 import { lower, USD } from "./shared.mjs";
 import { jsonRequest } from "./http.mjs";
+import { frontendPoolsFor } from "./frontend-pools.mjs";
 export class Prices {
   constructor(
     config,
@@ -38,12 +39,14 @@ export class Prices {
     const assets = new Map(
       this.config.assets.map((a) => [lower(a.address), a])
     );
-    // Only explicit server lists extend the hourly watchlist. Browser reads and
-    // locally cached pools cannot enroll assets or cause CoinGecko requests.
+    // Explicit frontend/server listings extend read-only hourly pricing, without
+    // curator enrollment. Browser reads and local creations cannot trigger fetches.
     const pools = new Set(
-      [...(this.config.pools ?? []), ...(this.config.curatedPools ?? [])].map(
-        (p) => lower(p.address)
-      )
+      [
+        ...frontendPoolsFor(this.config.chainId),
+        ...(this.config.pools ?? []),
+        ...(this.config.curatedPools ?? []),
+      ].map((p) => lower(p.address))
     );
     if (this.chain)
       for (const address of pools) {

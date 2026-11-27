@@ -141,3 +141,50 @@ test("Only server-listed pools extend the hourly price watchlist; missing custom
     /Missing price/
   );
 });
+
+test("Frontend-listed BNB portfolios receive hourly USD prices without server enrollment", async () => {
+  const wbnb = {
+    address: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+    symbol: "WBNB",
+  };
+  const usdc = {
+    address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+    symbol: "USDC",
+  };
+  const frontendPool = "0x44363bddb3fafd262a416567b7827e46d266f86d";
+  const c = { ...config, chainId: 56, pools: [], curatedPools: [] };
+  let reads = 0,
+    requests = 0;
+  const prices = new Prices(c, {
+    now: () => 10000000,
+    chain: {
+      snapshot: async (address) => {
+        assert.equal(address, frontendPool);
+        reads++;
+        return { tokens: [wbnb, usdc] };
+      },
+    },
+    request: async (url) => {
+      requests++;
+      const watched = new URL(url).searchParams
+        .get("contract_addresses")
+        .split(",")
+        .map(lower);
+      assert.ok(watched.includes(lower(wbnb.address)));
+      assert.ok(watched.includes(lower(usdc.address)));
+      return Object.fromEntries(
+        watched.map((address) => [
+          address,
+          { usd: 100, last_updated_at: 10000 },
+        ])
+      );
+    },
+  });
+  const snapshot = await prices.get();
+  await prices.get();
+  prices.assertFresh(snapshot, 10000, [wbnb, usdc]);
+  assert.equal(reads, 1);
+  assert.equal(requests, 1);
+  assert.deepEqual(c.pools, []);
+  assert.deepEqual(c.curatedPools, []);
+});

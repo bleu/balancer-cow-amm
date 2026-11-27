@@ -16,13 +16,13 @@ Choose the pool name, LP symbol, curator, immutable public swap fee and optional
 
 New setup drafts persist their complete ordered token metadata, weights and raw seed amounts in the existing browser cache. After rejection/reload, initialization uses that saved composition, validates already-bound weights, and resumes the same factory request without substituting the current MAG7 configuration. Old drafts without an asset list retain the legacy preset fallback.
 
-Creation and incomplete setup remain local to the browser. Importing a known pool address still checks membership in the configured factory. Public visibility can be configured through `DEMO_POOLS` or the frontend-only list in `demo/web/lib/frontend-pools.ts`; automated rebalancing independently requires `CURATOR_POOLS` and the matching on-chain curator authority. The frontend-only BNB list includes WBNB-USDC at `0x44363bddb3fafd262a416567B7827e46D266F86D`. This listing does not change server environment settings, enroll it in curation, or extend the hourly server price watchlist.
+Creation and incomplete setup remain local to the browser. Importing a known pool address still checks membership in the configured factory. Public visibility can be configured through `DEMO_POOLS` or the frontend list in `demo/lib/frontend-pools.mjs`; automated rebalancing independently requires `CURATOR_POOLS` and the matching on-chain curator authority. The frontend-only BNB list includes WBNB-USDC at `0x44363bddb3fafd262a416567B7827e46D266F86D`. This listing enables read-only USD pricing in the hourly server watchlist, without changing server environment settings or enrolling it in curation.
 
 Cards show the pool's own LP symbol and token count. The detail page reads its actual tokens, reserves and weights. Deposits require every constituent token and withdrawals return every constituent proportionally, including when USD valuation is unavailable. Liquidity calculations do not depend on CoinGecko.
 
 ## Prices and curator service
 
-The hourly price watchlist includes the configured preset plus tokens read from pools explicitly registered in `DEMO_POOLS` or `CURATOR_POOLS`. Addresses are deduplicated. Browser creation/import/read requests do not add watchlist entries or trigger CoinGecko fetches. After updating the server lists and restarting, the next price fetch includes the portfolio's tokens.
+The hourly price watchlist includes the configured preset plus tokens read from explicit frontend listings and pools registered in `DEMO_POOLS` or `CURATOR_POOLS`. Addresses are deduplicated. Browser creation/import/read requests do not add watchlist entries or trigger CoinGecko fetches. After updating the server lists and restarting, the next price fetch includes the portfolio's tokens.
 
 The price cache retains available prices when CoinGecko lacks coverage for another token. A portfolio missing any required price shows its USD valuation as unavailable, without treating that token as zero. Freshness checks apply to the assets of the particular pool. The curator skips unpriced/stale portfolios and can continue with another priced portfolio.
 
