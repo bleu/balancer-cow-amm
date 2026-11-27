@@ -7,9 +7,12 @@ import { loadConfig, publicConfig } from "../lib/config.mjs";
 import { localFixtureEnv, serializeEnv } from "../lib/local-env.mjs";
 import { ASSETS } from "../lib/shared.mjs";
 const address = "0x0000000000000000000000000000000000000011";
-test("Defaults and the example env start in read-only Base setup mode", () => {
+test("Defaults and the example env start in read-only BNB setup mode", () => {
   const defaults = loadConfig({});
-  assert.equal(defaults.chainId, 8453);
+  assert.equal(defaults.chainId, 56);
+  assert.equal(defaults.nativeCurrency.symbol, "BNB");
+  assert.equal(defaults.coingeckoPlatform, "binance-smart-chain");
+  assert.ok(defaults.assets.every((a) => a.decimals === 18));
   assert.equal(defaults.factory, null);
   assert.deepEqual(defaults.pools, []);
   assert.equal(defaults.live, false);
@@ -88,7 +91,8 @@ test("Malformed env and unsafe policy settings fail before starting the service"
     { CURATOR_ORDER_SECONDS: "300" },
     { CURATOR_FEE_BPS: "1.5" },
     { CURATOR_MIN_DRIFT_USD: "0.01" },
-    { BASE_RPC_URL: "file:///private" },
+    { RPC_URL: "file:///private" },
+    { BASE_RPC_URL: "https://mainnet.base.org" },
     { COW_API_URL: "https://cow.example/v2" },
     { DEMO_POOLS: JSON.stringify([{ address }]) },
   ])

@@ -64,9 +64,11 @@ export class PoolActions {
       this.publicClient.getGasPrice(),
     ]);
     progress(
-      `${label}\nEstimated execution fee: ${formatEther(
-        gas * gasPrice
-      )} ETH (plus Base L1 data fee)\nConfirm in your wallet.`
+      `${label}\nEstimated execution fee: ${formatEther(gas * gasPrice)} ${
+        this.config.nativeCurrency.symbol
+      }${
+        this.config.chainId === 8453 ? " (plus Base L1 data fee)" : ""
+      }\nConfirm in your wallet.`
     );
     await this.guard();
     const hash = await this.wallet.writeContract({
@@ -78,7 +80,7 @@ export class PoolActions {
     progress(`${label}\nSubmitted ${hash}\nWaiting for confirmation…`);
     const receipt = await this.publicClient.waitForTransactionReceipt({
       hash,
-      confirmations: 2,
+      confirmations: this.config.confirmations,
       pollingInterval: this.config.localDev ? 200 : 2000,
     });
     if (receipt.status !== "success") throw Error(label + " reverted");
@@ -109,6 +111,8 @@ export class PoolActions {
   async initialize(draft: Draft, progress: Progress) {
     const p = this.publicClient,
       c = this.config;
+    if (draft.chainId !== c.chainId)
+      throw Error("This setup belongs to a different chain");
     if (draft.creator.toLowerCase() !== this.account.toLowerCase())
       throw Error("Connect the creator wallet to resume");
     if (draft.factory.toLowerCase() !== c.factory?.toLowerCase())

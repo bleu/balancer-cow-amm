@@ -1,6 +1,6 @@
-# Base MAG7 demo
+# MAG7 demo: BNB Chain and Base
 
-A wallet frontend and a single-process curator service for the [demo plan](../docs/base-mag7-demo.md). Uses production CoW's Base API and the native B20 stock tokens. The default configuration displays setup instructions: no funded Base factory or pool is bundled.
+A wallet frontend and a single-process curator service for the [demo plan](../docs/base-mag7-demo.md). Defaults to production CoW on BNB Chain with Ondo stocks; explicit Base configuration retains the native B20 preset. The default configuration displays setup instructions: no funded Base factory or pool is bundled.
 
 The frontend creates and resumes pools, recovers abandoned seed assets, imports pools by address, joins/exits proportionally, reads reserves and current curator fees, and lets the creator replace the curator. Financial state comes from RPC. Creation addresses come from `factory.createdPool(creator, requestId)`, without log scanning or receipt event decoding.
 
@@ -8,7 +8,7 @@ The frontend creates and resumes pools, recovers abandoned seed assets, imports 
 
 The frontend lives in `demo/web`: Next.js App Router, React, strict TypeScript and Tailwind CSS. Wagmi manages injected-wallet connections and account/network changes; viem reads, simulates, estimates and submits contract transactions. TanStack Query caches and refreshes API reads. Shared basket math and ABI definitions live in `demo/lib/shared.mjs` with TypeScript declarations.
 
-`pnpm dev` (Base) and `pnpm dev:local` (Anvil) run the Next development server with live reload. A single Node process serves Next pages, the existing read-only `/api/*` routes and the curator loop. Wallet transactions go through the injected wallet. Next builds do not start the curator or contact RPC/price services, and no signing key or RPC credential is bundled into the frontend.
+`pnpm dev` (configured production network) and `pnpm dev:local` (Anvil) run the Next development server with live reload. A single Node process serves Next pages, the existing read-only `/api/*` routes and the curator loop. Wallet transactions go through the injected wallet. Next builds do not start the curator or contact RPC/price services, and no signing key or RPC credential is bundled into the frontend.
 
 For production:
 
@@ -44,10 +44,16 @@ Open <http://127.0.0.1:3000>. This explicitly labeled Anvil fixture uses synthet
 
 The local fixture does not call production CoW for order history and is not enrolled in live curation. The separate existing `pnpm test:local:settlement` exercises real pinned settlement bytecode locally.
 
-## Configure Base
+## Configure BNB Chain
 
-1. Copy `.env.example` to `.env` and set the demo environment variables there (or inject them through your host). Configure `BASE_RPC_URL` for a Base RPC supporting ordinary reads and simulations. `pnpm dev` loads `.env`; no JSON configuration file is used or served to the browser.
-2. Deploy the **new** factory version supporting request IDs. `DEPLOYER_ADDRESS=0x... pnpm demo:deploy:base` outputs an unsigned deployment transaction. Inspect that transaction and its admin/production settlement/trampoline addresses. Only an explicit `pnpm demo:deploy:base --broadcast`, with `DEPLOYER_PRIVATE_KEY`, submits it. The deployer needs Base ETH. `FACTORY_ADMIN` defaults to the deployer. Deployment writes a public receipt to `.local/base-factory.json`.
+Follow [the BNB/Ondo runbook](../docs/bnb-ondo-demo.md) for the pinned assets, network settings, compatibility checks, deployment and BscScan verification. `.env.example` defaults to BNB. Use `RPC_URL` for your BNB endpoint, `pnpm test:bnb` for fork compatibility, `pnpm demo:check:bnb` for read-only prices/quotes, and `pnpm demo:deploy:bnb` for an unsigned deployment dry-run. Broadcasting always requires an explicit `--broadcast`.
+
+The existing private `.env` stays on Base until a new BNB factory is deployed. Update the chain, RPC, explorer, CoW endpoint, factory and pool lists together; do not carry a Base factory/pool address into the BNB configuration.
+
+## Explicit Base compatibility
+
+1. Copy `.env.example` to `.env` and set the demo environment variables there (or inject them through your host). Set `DEMO_CHAIN_ID=8453`, `DEMO_NETWORK_NAME=Base`, `COW_API_URL=https://api.cow.fi/base/api/v1`, and `DEMO_EXPLORER_URL=https://basescan.org`. Configure `RPC_URL` (or legacy `BASE_RPC_URL`) for a Base RPC supporting ordinary reads and simulations. `pnpm dev` loads `.env`; no JSON configuration file is used or served to the browser.
+2. Deploy the **new** factory version supporting request IDs. `DEPLOYER_ADDRESS=0x... pnpm demo:deploy:base` outputs an unsigned deployment transaction. Inspect that transaction and its admin/production settlement/trampoline addresses. Only an explicit `pnpm demo:deploy:base --broadcast`, with `DEPLOYER_PRIVATE_KEY`, submits it. The deployer needs Base ETH. `FACTORY_ADMIN` defaults to the deployer. Deployment writes a public receipt to `.local/base-factory.json`. Verification files are emitted under `.local/base-factory-verification-v2/`.
 3. Set `DEMO_FACTORY_ADDRESS` and the server curator's **public** `CURATOR_ADDRESS` in `.env`. Start the app with `CURATOR_LIVE=false`. Use the creation flow to seed/finalize a MAG7 pool from a wallet holding all seven native B20 assets. The preset uses Folio weights: 20/15/15/15/15/10/10. Creation defaults to protective `MAX_FEE` for public swaps; with a version-2 factory, the creator can choose a lower fee that is fixed immediately at deployment. The separate CoW curator fee is unchanged. Initial LP supply is the contract's fixed 100 shares; the USD seed helper only suggests constituent amounts.
 4. Inspect the pool's finalized state, assets, weights, curator, order duration, relayer allowances and intended seed allocation. Add its address explicitly to **both** `DEMO_POOLS` and `CURATOR_POOLS`, then restart. `DEMO_POOLS` publishes the catalog; `CURATOR_POOLS` enables evaluation. Production config rejects public entries missing from the watchlist. An on-chain curator address alone never enrolls a pool. A user's creation is stored only in their browser until this operator action.
 5. Put `CURATOR_PRIVATE_KEY` in the service environment; it must match `CURATOR_ADDRESS`. Run one process per signing key/watchlist. With `CURATOR_LIVE=false`, the service prepares and verifies candidates but never signs or posts them. After reviewing real token behavior and executable hook-aware quotes, set `CURATOR_LIVE=true` to enable order submission. The key needs no user seed assets and is never sent to the client.

@@ -10,7 +10,7 @@ export function localFixtureEnv(state, rpcUrl, curatorAddress) {
     DEMO_CHAIN_ID: "31338",
     DEMO_NETWORK_NAME: "Local Anvil",
     DEMO_LOCAL_DEV: "true",
-    BASE_RPC_URL: rpcUrl,
+    RPC_URL: rpcUrl,
     DEMO_EXPLORER_URL: "",
     DEMO_FACTORY_ADDRESS: state.factory,
     CURATOR_ADDRESS: curatorAddress,

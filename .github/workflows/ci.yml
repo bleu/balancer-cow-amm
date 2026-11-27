@@ -11,6 +11,26 @@ env:
   SEPOLIA_RPC: ${{ secrets.SEPOLIA_RPC }}
 
 jobs:
+  bnb-ondo-tests:
+    name: BNB Ondo token compatibility
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FOUNDRY_LINT_LINT_ON_BUILD: 'false'
+      BNB_RPC_URL: ${{ secrets.BNB_RPC_URL || 'https://bsc-rpc.publicnode.com' }}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          cache: 'pnpm'
+      - uses: foundry-rs/foundry-toolchain@v1.2.0
+        with:
+          version: nightly
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:bnb
+
   unit-tests:
     name: Run Unit Tests
     runs-on: ubuntu-latest

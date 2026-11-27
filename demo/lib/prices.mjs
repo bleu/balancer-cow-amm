@@ -1,4 +1,4 @@
-import { ASSETS, lower, USD } from "./shared.mjs";
+import { lower, USD } from "./shared.mjs";
 import { jsonRequest } from "./http.mjs";
 export class Prices {
   constructor(
@@ -34,12 +34,12 @@ export class Prices {
   }
   async fetch() {
     const c = this.config,
-      assets = c.localAssets ?? ASSETS;
+      assets = c.assets;
     // Cache both successful and failed attempts. Browser requests never cause a refresh.
     this.nextFetch = this.now() + c.intervalSeconds * 1000;
     try {
       const url = new URL(
-        "https://api.coingecko.com/api/v3/simple/token_price/base"
+        `https://api.coingecko.com/api/v3/simple/token_price/${c.coingeckoPlatform}`
       );
       url.searchParams.set(
         "contract_addresses",

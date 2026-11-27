@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { networkProfile } from "./networks.mjs";
 export function loadConfig(env = process.env) {
   if (env.DEMO_CONFIG)
     throw Error(
@@ -24,19 +25,24 @@ export function loadConfig(env = process.env) {
       throw Error(`Invalid JSON in ${name}`);
     }
   };
+  const chainId = number("DEMO_CHAIN_ID", 56);
+  const profile = networkProfile(chainId);
+  if (env.BASE_RPC_URL && !env.RPC_URL && chainId === 56)
+    throw Error("BASE_RPC_URL is only for Base; set RPC_URL for BNB");
   const config = {
-    chainId: number("DEMO_CHAIN_ID", 8453),
-    name: env.DEMO_NETWORK_NAME ?? "Base",
-    rpcUrl: env.BASE_RPC_URL ?? "https://mainnet.base.org",
-    explorerUrl: env.DEMO_EXPLORER_URL ?? "https://basescan.org",
+    chainId,
+    name: env.DEMO_NETWORK_NAME ?? profile.name,
+    rpcUrl: env.RPC_URL || env.BASE_RPC_URL || profile.rpcUrl,
+    publicRpcUrl: profile.rpcUrl,
+    nativeCurrency: profile.nativeCurrency,
+    coingeckoPlatform: profile.coingeckoPlatform,
+    assets: profile.assets,
+    explorerUrl: env.DEMO_EXPLORER_URL ?? profile.explorerUrl,
     factory: env.DEMO_FACTORY_ADDRESS?.trim() || null,
     curatorAddress: env.CURATOR_ADDRESS?.trim() || null,
     pools: json("DEMO_POOLS", []),
     curatedPools: json("CURATOR_POOLS", []),
-    cowApi: (env.COW_API_URL ?? "https://api.cow.fi/base/api/v1").replace(
-      /\/$/,
-      ""
-    ),
+    cowApi: (env.COW_API_URL ?? profile.cowApi).replace(/\/$/, ""),
     intervalSeconds: number("CURATOR_INTERVAL_SECONDS", 3600),
     orderSeconds: number("CURATOR_ORDER_SECONDS", 180),
     priceMaxAgeSeconds: number("COINGECKO_MAX_AGE_SECONDS", 1800),
@@ -66,6 +72,11 @@ export function loadConfig(env = process.env) {
   }
   if (!config.cowApi.endsWith("/v1"))
     throw Error("COW_API_URL must end in /v1");
+  if (
+    new URL(config.cowApi).hostname === "api.cow.fi" &&
+    config.cowApi !== profile.cowApi
+  )
+    throw Error("CoW API network does not match DEMO_CHAIN_ID");
   if (!config.host || config.port < 1 || config.port > 65535)
     throw Error("Invalid DEMO_HOST or DEMO_PORT");
   if (config.localDev) {
@@ -98,10 +109,10 @@ export function loadConfig(env = process.env) {
   } else if (config.localAssets || config.fixturePrices)
     throw Error("Fixture assets/prices require DEMO_LOCAL_DEV=true");
   if (
-    config.chainId !== 8453 &&
+    ![56, 8453].includes(config.chainId) &&
     !(config.localDev && [31337, 31338].includes(config.chainId))
   )
-    throw Error("Only Base or explicit local fixtures supported");
+    throw Error("Only BNB, Base or explicit local fixtures supported");
   for (const field of ["factory", "curatorAddress"])
     if (config[field] && !ethers.utils.isAddress(config[field]))
       throw Error(`Invalid ${field}`);
@@ -169,6 +180,7 @@ export function loadConfig(env = process.env) {
   }
   if (config.live && (!config.key || !config.factory))
     throw Error("Live posting requires a curator key and configured factory");
+  if (config.localDev) config.assets = config.localAssets;
   // Never return config.key or credential-bearing RPC URLs to the browser.
   return config;
 }
@@ -184,7 +196,10 @@ export function publicConfig(c) {
       "slippageBps",
       "curatorFeeBps",
       "priceMaxAgeSeconds",
-      "localAssets",
+      "assets",
+      "publicRpcUrl",
+      "nativeCurrency",
+      "confirmations",
       "localDev",
     ].map((k) => [k, c[k] ?? null])
   );
