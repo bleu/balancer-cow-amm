@@ -36,13 +36,13 @@ type Modal =
       pool: PoolSnapshot;
     };
 const assetTints = [
-  "#c7f3a8",
-  "#a8d58a",
-  "#8eb574",
-  "#719460",
-  "#586f4c",
-  "#d8e9cd",
-  "#afc5a0",
+  "#8dc647",
+  "#6dac37",
+  "#a4d473",
+  "#4e8f29",
+  "#badf97",
+  "#7ba35c",
+  "#d2e8bc",
 ];
 const assetTint = (index: number) => assetTints[index] ?? assetTints[0];
 function useCatalog() {

@@ -8,16 +8,18 @@ Warden is the app identity for the existing weighted-pool demo. The basket bring
 
 The eye is a small, recognizable outline in the wordmark, favicon and dialog header. On the explore page, it becomes a larger diagram: seven points orbit an iris, connecting the mark to the MAG7 basket. It is drawn with SVG so it stays sharp at every size.
 
-Light green introduces the product and identifies primary actions. The rest of the app uses near-black and dark-gray surfaces with a slight green tint, quiet borders and off-white text. The pool dashboard is deliberately quieter than the introduction so numerical information leads. Green shades distinguish the allocation segments; the table also names each asset and shows numeric percentages.
+Inspired by [CoinGecko’s light presentation](https://www.coingecko.com/), fresh green identifies primary actions and a pale-green introduction frames the eye. The rest of the app uses white cards on a soft-gray canvas, quiet borders and dark text. The pool dashboard is deliberately quieter than the introduction so numerical information leads. Green shades distinguish the allocation segments; the table also names each asset and shows numeric percentages.
 
 | Role | Color |
 | --- | --- |
-| Primary green | `#c7f3a8` |
-| Canvas | `#111511` |
-| Surface | `#1b211b` |
-| Main text | `#f1f4ec` |
-| Secondary text | `#a0aa9c` |
-| Borders | `#333b32` |
+| Primary green | `#8dc647` |
+| Text/link green | `#347c20` |
+| Pale-green introduction | `#f0f8e9` |
+| Canvas | `#f8faf9` |
+| Surface | `#ffffff` |
+| Main text | `#18201b` |
+| Secondary text | `#687568` |
+| Borders | `#e2e8e1` |
 
 Manrope gives the wordmark and large headings a consistent shape while staying readable for asset names and figures. The Latin variable font is self-hosted with its SIL Open Font License; rendering does not require a request to a font provider.
 

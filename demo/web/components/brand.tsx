@@ -78,11 +78,11 @@ export function BasketEye() {
             cx="210"
             cy="170"
             r="65"
-            stroke="#c7f3a8"
+            stroke="#f0f8e9"
             strokeOpacity=".4"
           />
-          <circle cx="210" cy="170" r="45" stroke="#c7f3a8" strokeWidth="1.5" />
-          <circle cx="210" cy="170" r="26" fill="#c7f3a8" />
+          <circle cx="210" cy="170" r="45" stroke="#f0f8e9" strokeWidth="1.5" />
+          <circle cx="210" cy="170" r="26" fill="#f0f8e9" />
           <circle cx="217" cy="162" r="7" fill="currentColor" />
         </g>
         {[

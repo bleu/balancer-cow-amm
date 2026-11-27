@@ -1,24 +1,24 @@
 @import "tailwindcss";
 @source "../";
 @theme {
-  --color-forest: #c7f3a8;
-  --color-canvas: #111511;
-  --color-ink: #f1f4ec;
-  --color-line: #333b32;
-  --color-surface: #1b211b;
-  --color-slate-500: #a0aa9c;
+  --color-forest: #347c20;
+  --color-canvas: #f8faf9;
+  --color-ink: #18201b;
+  --color-line: #e2e8e1;
+  --color-surface: #ffffff;
+  --color-slate-500: #687568;
 }
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
   }
   body {
     @apply bg-canvas text-ink antialiased;
     font-family: var(--font-warden), Arial, sans-serif;
   }
   ::selection {
-    background: #c7f3a8;
-    color: #111511;
+    background: #d4edbd;
+    color: #18201b;
   }
   button:not(:disabled),
   a {
@@ -33,18 +33,18 @@
     outline-offset: 5px;
   }
   :focus-visible {
-    outline: 2px solid #c7f3a8;
+    outline: 2px solid #347c20;
   }
   input {
     @apply w-full rounded-lg border border-line px-3 py-3 text-sm;
-    background: #111711;
-    color: #f1f4ec;
+    background: #ffffff;
+    color: #18201b;
   }
   input:focus {
-    border-color: #c7f3a8;
+    border-color: #347c20;
   }
   input[type="checkbox"] {
-    accent-color: #c7f3a8;
+    accent-color: #347c20;
   }
   label {
     @apply mt-4 mb-1.5 block text-sm font-semibold;
@@ -71,19 +71,19 @@
     min-height: 44px;
   }
   .primary {
-    background: #c7f3a8;
-    color: #162113;
+    background: #8dc647;
+    color: #172611;
   }
   .primary:hover:not(:disabled) {
-    background: #d9ffc0;
+    background: #7db733;
   }
   .secondary {
     @apply border border-line bg-surface;
-    color: #e3e8df;
+    color: #253025;
   }
   .secondary:hover:not(:disabled) {
-    background: #283127;
-    border-color: #5d7155;
+    background: #f0f5ec;
+    border-color: #a7c996;
   }
   .text-button {
     @apply inline-flex items-center gap-2 text-sm font-semibold text-forest underline-offset-4 hover:underline;
@@ -101,16 +101,16 @@
     display: inline-flex;
     align-items: center;
     gap: 11px;
-    color: #eef5e9;
+    color: #1c281b;
     text-decoration: none;
   }
   .brand-mark {
     width: 41px;
     height: 41px;
     padding: 8px 5px;
-    border: 1px solid #536447;
+    border: 1px solid #d6e6cc;
     border-radius: 12px;
-    color: #c7f3a8;
+    color: #347c20;
   }
   .wordmark {
     font-size: 27px;
@@ -119,7 +119,8 @@
     line-height: 1;
   }
   .app-header {
-    border-bottom: 1px solid #2a3229;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8e1;
   }
   .header-inner {
     max-width: 1280px;
@@ -134,7 +135,7 @@
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    color: #a9b4a3;
+    color: #687568;
     font-size: 11px;
     white-space: nowrap;
   }
@@ -142,7 +143,7 @@
     content: "";
     width: 5px;
     height: 5px;
-    border: 1px solid #a9b4a3;
+    border: 1px solid #687568;
     border-radius: 50%;
   }
   .app-main {
@@ -156,14 +157,14 @@
     gap: 12px;
     align-items: center;
     padding: 23px 0;
-    color: #83907e;
+    color: #687568;
     font-size: 11px;
   }
   .breadcrumbs a {
-    color: #c5cfbf;
+    color: #3d5038;
   }
   .breadcrumbs span[aria-hidden] {
-    color: #52604b;
+    color: #788773;
   }
   .hero {
     position: relative;
@@ -172,8 +173,8 @@
     overflow: hidden;
     align-items: center;
     border-radius: 22px;
-    background: #c7f3a8;
-    color: #182114;
+    background: #f0f8e9;
+    color: #1c281b;
     padding: 48px 46px 0;
   }
   .hero-copy {
@@ -182,7 +183,7 @@
     padding-bottom: 42px;
   }
   .hero .eyebrow {
-    color: #405337;
+    color: #4f6b43;
     font-size: 9px;
     margin-bottom: 29px;
   }
@@ -194,10 +195,10 @@
   }
   .hero h1 em {
     font-style: normal;
-    color: #527044;
+    color: #4a982b;
   }
   .hero-description {
-    color: #425739;
+    color: #52644d;
     max-width: 375px;
     margin-top: 24px;
     font-size: 13px;
@@ -205,19 +206,19 @@
   }
   .hero .button {
     margin-top: 29px;
-    background: #172113;
-    color: #e6f7da;
-    border: 1px solid #172113;
+    background: #8dc647;
+    color: #172611;
+    border: 1px solid #8dc647;
   }
   .hero .button:hover:not(:disabled) {
-    background: #2d4225;
+    background: #7db733;
   }
   .basket-eye {
     position: relative;
     width: 100%;
     max-width: 420px;
     justify-self: center;
-    color: #1b2916;
+    color: #326d20;
     padding-bottom: 40px;
   }
   .basket-eye svg {
@@ -236,8 +237,8 @@
     justify-content: space-between;
     gap: 20px;
     padding: 19px 0;
-    border-top: 1px solid #68845555;
-    color: #405437;
+    border-top: 1px solid #cfe2c4;
+    color: #52644d;
     font-size: 10px;
   }
   .hero-foot span {
@@ -279,15 +280,15 @@
   .pool-card {
     position: relative;
     display: block;
-    border: 1px solid #4c5c42;
+    border: 1px solid #dce7d6;
     border-radius: 16px;
-    background: #20291e;
+    background: #ffffff;
     padding: 26px;
     transition: border-color 0.2s, background-color 0.2s;
   }
   .pool-card:hover {
-    border-color: #a4cc88;
-    background: #263121;
+    border-color: #95c575;
+    background: #f7fbf3;
   }
   .basket-monogram {
     display: grid;
@@ -295,8 +296,8 @@
     width: 48px;
     height: 48px;
     border-radius: 13px;
-    color: #c7f3a8;
-    background: #34442c;
+    color: #347c20;
+    background: #eaf5df;
     font-size: 15px;
     font-weight: 700;
     letter-spacing: -0.05em;
@@ -305,10 +306,10 @@
     display: inline-flex;
     gap: 6px;
     align-items: center;
-    border: 1px solid #46563d;
+    border: 1px solid #d4e8c7;
     border-radius: 5px;
     padding: 5px 8px;
-    color: #b8cca9;
+    color: #477331;
     font-size: 9px;
     line-height: 1.3;
   }
@@ -331,7 +332,7 @@
   .pool-card-foot {
     margin-top: 27px;
     padding-top: 18px;
-    border-top: 1px solid #3c4935;
+    border-top: 1px solid #e5eddf;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -342,21 +343,21 @@
     place-items: center;
     width: 31px;
     height: 31px;
-    background: #c7f3a8;
+    background: #eaf5df;
     border-radius: 50%;
-    color: #172113;
+    color: #172611;
   }
   .catalog-note {
     font-size: 10px;
-    color: #8e9b87;
+    color: #687568;
     line-height: 1.9;
     margin-top: 18px;
     max-width: 440px;
   }
   .basket-blueprint {
-    border: 1px solid #333b32;
+    border: 1px solid #e2e8e1;
     border-radius: 16px;
-    background: #181e18;
+    background: #ffffff;
     padding: 27px;
   }
   .blueprint-title {
@@ -373,11 +374,11 @@
     letter-spacing: -0.04em;
   }
   .blueprint-title .eyebrow {
-    color: #9aaa90;
+    color: #687568;
     font-size: 8px;
   }
   .blueprint-eye {
-    color: #c7f3a8;
+    color: #347c20;
     width: 33px;
     margin-top: 2px;
   }
@@ -385,7 +386,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-top: 1px solid #30392e;
+    border-top: 1px solid #e5eddf;
     gap: 12px;
     padding: 11px 0;
     font-size: 11px;
@@ -400,10 +401,10 @@
     width: 28px;
     height: 28px;
     place-items: center;
-    border: 1px solid #3e4c37;
+    border: 1px solid #dce7d6;
     border-radius: 8px;
     font-size: 9px;
-    color: #bbd5aa;
+    color: #477331;
   }
   .preset-row small {
     margin: 2px 0 0;
@@ -412,7 +413,7 @@
   .preset-weight {
     font-family: ui-monospace, monospace;
     font-size: 12px;
-    color: #c7f3a8;
+    color: #347c20;
   }
   .allocation-strip {
     display: flex;
@@ -427,10 +428,10 @@
     gap: 30px;
     margin-top: 46px;
     padding-top: 30px;
-    border-top: 1px solid #333b32;
+    border-top: 1px solid #e2e8e1;
   }
   .principles .eyebrow {
-    color: #77866d;
+    color: #687568;
     margin-bottom: 10px;
     font-size: 9px;
   }
@@ -442,7 +443,7 @@
   .principles p {
     font-size: 11px;
     line-height: 1.9;
-    color: #98a391;
+    color: #687568;
   }
   .detail-header {
     display: flex;
@@ -461,7 +462,7 @@
     width: 61px;
     height: 61px;
     font-size: 20px;
-    border: 1px solid #4e6441;
+    border: 1px solid #d4e8c7;
   }
   .detail-header h1 {
     font-size: clamp(36px, 5vw, 52px);
@@ -483,7 +484,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: #a2ae99;
+    color: #687568;
     font-size: 10px;
   }
   .stat-value {
@@ -498,8 +499,8 @@
     font-size: 10px;
   }
   .stats-grid .stat-card:last-child {
-    background: #222d1d;
-    border-color: #4b5f3f;
+    background: #f1f8eb;
+    border-color: #d5e7c9;
   }
   .holdings-panel {
     padding: 27px;
@@ -512,7 +513,7 @@
     letter-spacing: -0.03em;
   }
   .holdings-panel tbody tr:hover {
-    background: #222c1e;
+    background: #f5f9f1;
   }
   .holding-identity {
     display: flex;
@@ -535,8 +536,8 @@
   .allocation-value {
     display: inline-block;
     border-radius: 5px;
-    background: #2c3825;
-    color: #bde3a5;
+    background: #edf6e5;
+    color: #397324;
     padding: 4px 7px;
     font-size: 11px;
   }
@@ -548,7 +549,7 @@
   }
   .settings-grid dt {
     font-size: 10px;
-    color: #a0aa9c;
+    color: #687568;
   }
   .settings-grid dd {
     text-align: right;
@@ -560,34 +561,34 @@
   .app-footer {
     max-width: 1216px;
     margin: 0 auto;
-    border-top: 1px solid #333b32;
+    border-top: 1px solid #e2e8e1;
     padding: 26px 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: 18px;
-    color: #85917e;
+    color: #687568;
     font-size: 10px;
   }
   .footer-brand {
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #bdc9b5;
+    color: #42583a;
   }
   .footer-brand svg {
     width: 25px;
   }
   .warden-dialog {
-    background: #1b211b;
-    border-color: #4c5c42;
+    background: #ffffff;
+    border-color: #dce7d6;
     border-radius: 18px;
     padding: 28px;
-    box-shadow: 0 24px 120px #0008;
+    box-shadow: 0 24px 120px #1726111a;
   }
   .warden-dialog::backdrop {
-    background: #080c08c9;
+    background: #24311e66;
     backdrop-filter: blur(6px);
   }
   .dialog-eyebrow {
@@ -595,7 +596,7 @@
     gap: 8px;
     align-items: center;
     font-size: 9px;
-    color: #accc98;
+    color: #477331;
     letter-spacing: 0.14em;
     text-transform: uppercase;
     margin-bottom: 14px;
@@ -612,7 +613,7 @@
     margin-bottom: 70px;
   }
   .loading-shell p {
-    color: #9ca993;
+    color: #687568;
     font-size: 13px;
   }
 }
