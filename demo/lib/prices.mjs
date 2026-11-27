@@ -1,15 +1,18 @@
 import { lower, USD } from "./shared.mjs";
 import { jsonRequest } from "./http.mjs";
+import { frontendPoolsFor } from "./frontend-pools.mjs";
 export class Prices {
   constructor(
     config,
     {
+      chain,
       request = jsonRequest,
       now = () => Date.now(),
       wait = (ms) => new Promise((r) => setTimeout(r, ms)),
     } = {}
   ) {
     this.config = config;
+    this.chain = chain;
     this.request = request;
     this.wait = wait;
     this.singleAddressOnly = false;
@@ -32,12 +35,39 @@ export class Prices {
     });
     return this.pending;
   }
+  async watchedAssets() {
+    const assets = new Map(
+      this.config.assets.map((a) => [lower(a.address), a])
+    );
+    // Explicit frontend/server listings extend read-only hourly pricing, without
+    // curator enrollment. Browser reads and local creations cannot trigger fetches.
+    const pools = new Set(
+      [
+        ...frontendPoolsFor(this.config.chainId),
+        ...(this.config.pools ?? []),
+        ...(this.config.curatedPools ?? []),
+      ].map((p) => lower(p.address))
+    );
+    if (this.chain)
+      for (const address of pools) {
+        try {
+          const snapshot = await this.chain.snapshot(address, {
+            strict: false,
+          });
+          for (const token of snapshot.tokens)
+            assets.set(lower(token.address), token);
+        } catch {
+          // A broken listing must not block prices for other configured pools.
+        }
+      }
+    return [...assets.values()];
+  }
   async fetch() {
-    const c = this.config,
-      assets = c.assets;
+    const c = this.config;
     // Cache both successful and failed attempts. Browser requests never cause a refresh.
     this.nextFetch = this.now() + c.intervalSeconds * 1000;
     try {
+      const assets = await this.watchedAssets();
       const url = new URL(
         `https://api.coingecko.com/api/v3/simple/token_price/${c.coingeckoPlatform}`
       );
@@ -68,8 +98,8 @@ export class Prices {
       }
       if (this.singleAddressOnly) {
         raw = {};
-        // Keyless currently permits one address per request. Seven slow requests
-        // per hour remain bounded; an error stops this cycle without signing.
+        // Keyless currently permits one address per request. Pace the explicit
+        // watchlist; an upstream error stops this fetch without signing.
         for (const asset of assets) {
           await this.wait(12500);
           const single = new URL(url);
@@ -78,6 +108,7 @@ export class Prices {
         }
       }
       const values = {};
+      const missing = [];
       for (const asset of assets) {
         const p = raw[lower(asset.address)];
         if (
@@ -85,19 +116,25 @@ export class Prices {
           !Number.isFinite(p.usd) ||
           p.usd <= 0 ||
           !Number.isSafeInteger(p.last_updated_at)
-        )
-          throw Error(`Missing price/timestamp for ${asset.symbol}`);
+        ) {
+          missing.push(asset.symbol);
+          continue;
+        }
         values[lower(asset.address)] = {
           usd: BigInt(Math.round(p.usd * Number(USD))).toString(),
           updatedAt: p.last_updated_at,
         };
       }
+      if (!Object.keys(values).length)
+        throw Error(`Missing price/timestamp for ${missing.join(", ")}`);
       this.cache = {
         values,
         fetchedAt: Math.floor(this.now() / 1000),
         source: "CoinGecko token USD",
       };
-      this.error = null;
+      this.error = missing.length
+        ? `Missing price/timestamp for ${missing.join(", ")}`
+        : null;
       return this.cache;
     } catch (e) {
       this.error = e.message;
@@ -108,9 +145,16 @@ export class Prices {
       throw e;
     }
   }
-  assertFresh(snapshot, chainTime) {
+  assertFresh(snapshot, chainTime, tokens) {
     if (!snapshot) throw Error("Prices unavailable");
-    for (const p of Object.values(snapshot.values)) {
+    const values = tokens
+      ? tokens.map((t) => {
+          const price = snapshot.values[lower(t.address)];
+          if (!price) throw Error(`Missing price/timestamp for ${t.symbol}`);
+          return price;
+        })
+      : Object.values(snapshot.values);
+    for (const p of values) {
       if (
         p.updatedAt > chainTime + 60 ||
         chainTime - p.updatedAt > this.config.priceMaxAgeSeconds

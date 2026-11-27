@@ -30,7 +30,7 @@ for (const token of state.tokens) {
   ).wait();
 }
 const originalAutomine = await provider.send("anvil_getAutomine", []);
-let browser;
+let browser, page;
 try {
   await provider.send("anvil_setIntervalMining", [1]);
   browser = await chromium.launch({
@@ -39,7 +39,7 @@ try {
       ? { executablePath: process.env.BROWSER_EXECUTABLE }
       : {}),
   });
-  const page = await browser.newPage({
+  page = await browser.newPage({
     viewport: { width: 1440, height: 1100 },
   });
   await page.exposeFunction("walletRpc", async ({ method, params = [] }) => {
@@ -151,12 +151,20 @@ try {
   await page.locator("#resume").click();
   await page.locator("#initialize-confirm").click();
   await page.waitForFunction(
-    () =>
-      document
-        .getElementById("progress")
-        .textContent.includes("Pool initialized."),
+    () => {
+      const text = document.getElementById("progress")?.textContent ?? "";
+      return (
+        text.includes("Pool initialized.") ||
+        (text.length > 0 &&
+          document.getElementById("initialize-confirm")?.disabled === false)
+      );
+    },
     null,
     { timeout: 240000 }
+  );
+  assert.match(
+    await page.locator("#progress").textContent(),
+    /Pool initialized\./
   );
   assert.equal(await page.locator("#initialize-confirm").isDisabled(), true);
   await page.locator("#close-modal").click();
@@ -231,6 +239,19 @@ try {
   console.log(
     "Custom fixed public fee, solver opt-in/toggle, deposits/withdrawals, setup recovery and responsive layout passed."
   );
+} catch (error) {
+  if (page)
+    console.error(
+      "Browser state:",
+      await page
+        .evaluate(() => ({
+          url: location.href,
+          progress: document.getElementById("progress")?.textContent,
+          create: document.getElementById("create-confirm")?.textContent,
+        }))
+        .catch(() => null)
+    );
+  throw error;
 } finally {
   await browser?.close();
   await provider.send("anvil_setIntervalMining", [0]);

@@ -107,17 +107,22 @@ export class Chain {
       })
     );
     if (strict) {
-      if (!finalized || tokens.length !== 7 || duration !== 180)
-        throw Error("Pool is incomplete or does not match MAG7 settings");
+      if (
+        !finalized ||
+        tokens.length < 2 ||
+        tokens.length > 8 ||
+        duration !== 180
+      )
+        throw Error("Pool is incomplete or has unsupported settings");
+      let total = 0n;
       for (const t of tokens) {
-        const a = preset.find((a) => lower(a.address) === lower(t.address));
-        if (
-          !a ||
-          t.denorm !== ethers.utils.parseEther(String(a.denorm)).toString() ||
-          t.decimals !== a.decimals
-        )
-          throw Error("Pool token/weight configuration mismatch");
+        const weight = BigInt(t.denorm);
+        if (weight < 10n ** 18n || weight > 50n * 10n ** 18n)
+          throw Error("Pool token weight is outside the supported limits");
+        total += weight;
       }
+      if (total > 50n * 10n ** 18n)
+        throw Error("Pool total weight exceeds the limit");
     }
     return {
       address,

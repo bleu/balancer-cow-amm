@@ -25,6 +25,7 @@ import {
 import { FACTORY_ABI, POOL_ABI, TOKEN_ABI } from "../../lib/shared.mjs";
 import type { DemoConfig, Draft, Progress } from "./types";
 import { savePool } from "./catalog";
+import { setupAssets } from "../../lib/portfolio.mjs";
 export const factoryAbi = parseAbi(FACTORY_ABI),
   poolAbi = parseAbi(POOL_ABI),
   tokenAbi = parseAbi(TOKEN_ABI);
@@ -117,6 +118,7 @@ export class PoolActions {
       throw Error("Connect the creator wallet to resume");
     if (draft.factory.toLowerCase() !== c.factory?.toLowerCase())
       throw Error("This setup belongs to a different factory");
+    const assets = setupAssets(draft, c.assets);
     const publicFee = BigInt(draft.publicSwapFee ?? "999999000000000000");
     const modern = await this.validateTradingOptions(
       publicFee,
@@ -180,8 +182,8 @@ export class PoolActions {
         this.account.toLowerCase()
       )
         throw Error("Connected wallet is not the initialization controller");
-      for (let i = 0; i < c.assets.length; i++) {
-        const asset = c.assets[i],
+      for (let i = 0; i < assets.length; i++) {
+        const asset = assets[i],
           args = [asset.address] as const;
         if (
           await p.readContract({
@@ -199,7 +201,7 @@ export class PoolActions {
               args,
             })) !== parseEther(String(asset.denorm))
           )
-            throw Error("Existing bound weight differs from preset");
+            throw Error("Existing bound weight differs from saved portfolio");
           continue;
         }
         const amount = BigInt(draft.seedAmounts[i]);
@@ -230,13 +232,13 @@ export class PoolActions {
       }
       const bound = await read("getCurrentTokens");
       if (
-        bound.length !== 7 ||
+        bound.length !== assets.length ||
         bound.some(
           (a) =>
-            !c.assets.some((t) => t.address.toLowerCase() === a.toLowerCase())
+            !assets.some((t) => t.address.toLowerCase() === a.toLowerCase())
         )
       )
-        throw Error("Bound token set differs from MAG7 preset");
+        throw Error("Bound token set differs from saved portfolio");
       if (
         (await read("creator")).toLowerCase() !== this.account.toLowerCase() ||
         (await read("curator")).toLowerCase() !== draft.curator.toLowerCase() ||
@@ -244,13 +246,13 @@ export class PoolActions {
         (await read("curatorFeeBps")) !== (draft.feeBps ?? c.curatorFeeBps)
       )
         throw Error("Pool authority or settings differ from setup");
-      for (let i = 0; i < c.assets.length; i++)
+      for (let i = 0; i < assets.length; i++)
         if (
           (await p.readContract({
             address,
             abi: poolAbi,
             functionName: "getBalance",
-            args: [c.assets[i].address],
+            args: [assets[i].address],
           })) !== BigInt(draft.seedAmounts[i])
         )
           throw Error("Bound seed amount differs from saved setup");
@@ -271,7 +273,7 @@ export class PoolActions {
         poolAbi,
         "finalize",
         [],
-        "Finalize MAG7 pool",
+        "Finalize pool",
         progress
       );
       const settlement = await p.readContract({
@@ -284,7 +286,7 @@ export class PoolActions {
         abi: parseAbi(["function vaultRelayer() view returns(address)"]),
         functionName: "vaultRelayer",
       });
-      for (const a of c.assets)
+      for (const a of assets)
         if (
           (await p.readContract({
             address: a.address,

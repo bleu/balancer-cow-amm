@@ -10,10 +10,12 @@ import {
 import { getAddress, isAddress, zeroAddress } from "viem";
 import { decimal, liquidityAmounts, units } from "../../lib/shared.mjs";
 import { api, errorText } from "../lib/api";
+import { customPortfolio } from "../../lib/portfolio.mjs";
 import { savePool } from "../lib/catalog";
 import { poolAbi, requestId, tokenAbi, type PoolActions } from "../lib/wallet";
 import { EyeMark } from "./brand";
 import type {
+  Asset,
   DemoConfig,
   Draft,
   PoolSnapshot,
@@ -104,6 +106,145 @@ interface Shared {
   ensure: () => Promise<PoolActions>;
   complete: (address?: `0x${string}`) => Promise<void>;
 }
+function CustomPortfolioEditor({
+  ensure,
+  onApply,
+}: Pick<Shared, "ensure"> & {
+  onApply: (assets: Asset[]) => void;
+}) {
+  const { run, busy, progress } = useTools();
+  const [rows, setRows] = useState([
+    { address: "", weight: "50" },
+    { address: "", weight: "50" },
+  ]);
+  function change(next: typeof rows) {
+    setRows(next);
+    onApply([]);
+  }
+  return (
+    <section
+      className="mt-5 rounded-xl border border-line p-4"
+      aria-label="Custom portfolio tokens"
+    >
+      <p className="note">
+        Choose 2–8 ERC-20 tokens on this network. Weights must total 100%, with
+        at least 2% per token and up to two decimal places. Weights are fixed
+        after initialization.
+      </p>
+      {rows.map((row, i) => (
+        <div key={i} className="mt-4 border-t border-line pt-3">
+          <label htmlFor={"custom-token-" + i}>Token {i + 1} address</label>
+          <input
+            id={"custom-token-" + i}
+            value={row.address}
+            onChange={(e) =>
+              change(
+                rows.map((r, j) =>
+                  j === i ? { ...r, address: e.target.value } : r
+                )
+              )
+            }
+            autoComplete="off"
+          />
+          <div className="flex items-end gap-3">
+            <div className="min-w-0 flex-1">
+              <label htmlFor={"custom-weight-" + i}>Target weight (%)</label>
+              <input
+                id={"custom-weight-" + i}
+                inputMode="decimal"
+                value={row.weight}
+                onChange={(e) =>
+                  change(
+                    rows.map((r, j) =>
+                      j === i ? { ...r, weight: e.target.value } : r
+                    )
+                  )
+                }
+              />
+            </div>
+            <button
+              type="button"
+              className="button secondary"
+              disabled={rows.length <= 2 || busy}
+              onClick={() => change(rows.filter((_, j) => j !== i))}
+              aria-label={"Remove token " + (i + 1)}
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      ))}
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button
+          id="custom-add-token"
+          type="button"
+          className="button secondary"
+          disabled={rows.length >= 8 || busy}
+          onClick={() => change([...rows, { address: "", weight: "" }])}
+        >
+          Add token
+        </button>
+        <button
+          id="custom-load-tokens"
+          type="button"
+          className="button primary"
+          disabled={busy}
+          onClick={() =>
+            run(async () => {
+              // Validate addresses and weights before sending any RPC requests.
+              customPortfolio(
+                rows.map((r) => ({
+                  ...r,
+                  decimals: 18,
+                  symbol: "TOKEN",
+                  name: "Token",
+                }))
+              );
+              const w = await ensure();
+              const assets = await Promise.all(
+                rows.map(async (row) => {
+                  const address = getAddress(row.address.trim());
+                  if ((await w.publicClient.getCode({ address })) === undefined)
+                    throw Error("Token address has no contract code");
+                  const [decimals, symbol, name] = await Promise.all([
+                    w.publicClient.readContract({
+                      address,
+                      abi: tokenAbi,
+                      functionName: "decimals",
+                    }),
+                    w.publicClient
+                      .readContract({
+                        address,
+                        abi: tokenAbi,
+                        functionName: "symbol",
+                      })
+                      .catch(() => "TOKEN"),
+                    w.publicClient
+                      .readContract({
+                        address,
+                        abi: tokenAbi,
+                        functionName: "name",
+                      })
+                      .catch(() => "Unknown token"),
+                  ]);
+                  return { ...row, address, decimals, symbol, name };
+                })
+              );
+              onApply(customPortfolio(assets));
+              progress("Tokens and weights loaded. Enter seed amounts below.");
+            })
+          }
+        >
+          Read tokens and apply weights
+        </button>
+      </div>
+      <p className="note mt-3">
+        Token metadata does not establish transfer compatibility or CoW
+        liquidity. Curator enrollment is separate.
+      </p>
+    </section>
+  );
+}
 export function CreateForm({
   config,
   ensure,
@@ -112,6 +253,8 @@ export function CreateForm({
   initialCurator,
 }: { prices: PriceSnapshot | null; initialCurator: `0x${string}` } & Shared) {
   const { busy, run, progress } = useTools(),
+    [custom, setCustom] = useState(false),
+    [customAssets, setCustomAssets] = useState<Asset[]>([]),
     [name, setName] = useState("Magnificent Seven"),
     [symbol, setSymbol] = useState("MAG7"),
     [curator, setCurator] = useState<string>(
@@ -125,20 +268,23 @@ export function CreateForm({
     [pending, setPending] = useState(false);
   const draft = useRef<Draft | null>(null);
 
+  const assets = custom ? customAssets : config.assets;
   const fresh =
     !!prices &&
-    Object.values(prices.values).every(
-      (p) => Date.now() / 1000 - p.updatedAt <= config.priceMaxAgeSeconds
-    );
+    assets.length >= 2 &&
+    assets.every((a) => {
+      const p = prices.values[a.address.toLowerCase()];
+      return p && Date.now() / 1000 - p.updatedAt <= config.priceMaxAgeSeconds;
+    });
   function suggest() {
     if (!prices || !fresh) return;
     try {
       const value = units(usd, 8);
       setSeeds(
-        config.assets.map((a) =>
+        assets.map((a) =>
           decimal(
-            (value * BigInt(a.weight) * 10n ** BigInt(a.decimals)) /
-              100n /
+            (value * units(String(a.weight), 2) * 10n ** BigInt(a.decimals)) /
+              10000n /
               BigInt(prices.values[a.address.toLowerCase()].usd),
             a.decimals,
             a.decimals
@@ -152,13 +298,15 @@ export function CreateForm({
   async function submit() {
     const w = await ensure();
     if (!draft.current) {
+      if (assets.length < 2)
+        throw Error("Read tokens and apply valid weights first");
       if (!config.factory)
         throw Error("Deploy and configure the demo factory first");
       const fee = units(publicFee, 16);
       if (fee < 1000000000000n || fee > 999999000000000000n)
         throw Error("Public fee must be between 0.0001% and 99.9999%");
       await w.validateTradingOptions(fee, solverEnabled);
-      const amounts = config.assets.map((a, i) => units(seeds[i], a.decimals));
+      const amounts = assets.map((a, i) => units(seeds[i], a.decimals));
       if (amounts.some((n) => n < 1000000n))
         throw Error(
           "Every seed must meet the pool minimum of 1,000,000 raw units"
@@ -167,16 +315,16 @@ export function CreateForm({
       if (address === zeroAddress) throw Error("Curator cannot be zero");
       if (!name.trim() || !symbol.trim())
         throw Error("Pool name and symbol required");
-      for (let i = 0; i < config.assets.length; i++)
+      for (let i = 0; i < assets.length; i++)
         if (
           (await w.publicClient.readContract({
-            address: config.assets[i].address,
+            address: assets[i].address,
             abi: tokenAbi,
             functionName: "balanceOf",
             args: [w.account],
           })) < amounts[i]
         )
-          throw Error("Insufficient " + config.assets[i].symbol);
+          throw Error("Insufficient " + assets[i].symbol);
       draft.current = {
         chainId: config.chainId,
         factory: config.factory,
@@ -189,6 +337,7 @@ export function CreateForm({
         publicSwapFee: fee.toString(),
         solverOrdersEnabled: solverEnabled,
         seedAmounts: amounts.map(String),
+        assets: assets.map((a) => ({ ...a })),
       };
       savePool(draft.current);
       setPending(true);
@@ -200,12 +349,53 @@ export function CreateForm({
   return (
     <>
       <p className="note">
-        Preset weights · {config.curatorFeeBps / 100}% curator share of surplus
-        · 3-minute orders. Creation stays in this browser. Automated rebalancing
-        requires separate registration. Setup requires several wallet
-        transactions.
+        {custom ? "Custom weights" : "MAG7 preset"} ·{" "}
+        {config.curatorFeeBps / 100}% curator share of surplus · 3-minute
+        orders. Creation stays in this browser. Automated rebalancing requires
+        separate registration. Setup requires several wallet transactions.
       </p>
       <fieldset disabled={pending || busy}>
+        <div className="mt-5 flex gap-3" aria-label="Portfolio type">
+          <button
+            id="preset-mag7"
+            type="button"
+            className={"button " + (!custom ? "primary" : "secondary")}
+            aria-pressed={!custom}
+            onClick={() => {
+              setCustom(false);
+              setName("Magnificent Seven");
+              setSymbol("MAG7");
+              setSeeds(config.assets.map(() => "0"));
+            }}
+          >
+            MAG7 preset
+          </button>
+          <button
+            id="preset-custom"
+            type="button"
+            className={"button " + (custom ? "primary" : "secondary")}
+            aria-pressed={custom}
+            onClick={() => {
+              setCustom(true);
+              setName("My portfolio");
+              setSymbol("WARDEN");
+              setCustomAssets([]);
+              setSeeds([]);
+            }}
+          >
+            Custom portfolio
+          </button>
+        </div>
+        {custom && (
+          <CustomPortfolioEditor
+            ensure={ensure}
+            onApply={(next) => {
+              setCustomAssets(next);
+              setSeeds(next.map(() => "0"));
+            }}
+          />
+        )}
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="new-name">Pool name</label>
@@ -278,10 +468,19 @@ export function CreateForm({
             Use cached prices
           </button>
         </div>
-        {config.assets.map((a, i) => (
+        {!fresh && (
+          <p className="note mt-3">
+            USD seed suggestions require cached prices for every selected token.
+            You can enter seed amounts manually.
+          </p>
+        )}
+        {assets.map((a, i) => (
           <div key={a.address}>
             <label htmlFor={"seed-" + i}>
               {a.symbol} · {a.weight}% target
+              <small>
+                {a.address} · {a.decimals} decimals
+              </small>
             </label>
             <input
               id={"seed-" + i}
@@ -299,7 +498,7 @@ export function CreateForm({
       <button
         id="create-confirm"
         className="button primary mt-5 w-full"
-        disabled={busy || done}
+        disabled={busy || done || assets.length < 2}
         onClick={() => run(submit)}
       >
         {done
@@ -426,7 +625,7 @@ export function LiquidityForm({
         s.tokens.some((t, i) => BigInt(t.walletBalance ?? "0") < bounds[i])
       )
         throw Error(
-          "Your wallet needs all seven amounts, including the configured movement buffer"
+          "Your wallet needs all required token amounts, including the configured movement buffer"
         );
       if (version === generation.current)
         setPreview({
@@ -479,7 +678,9 @@ export function LiquidityForm({
       poolAbi,
       deposit ? "joinPool" : "exitPool",
       [shares, bounds],
-      deposit ? "Deposit all seven assets" : "Withdraw all seven assets",
+      deposit
+        ? "Deposit all portfolio assets"
+        : "Withdraw all portfolio assets",
       progress
     );
     setPreview(null);
@@ -490,8 +691,8 @@ export function LiquidityForm({
     <>
       <p className="note">
         {deposit
-          ? "Bring all seven assets. Deposits follow current reserves, which may differ from target weights."
-          : "Receive all seven constituent tokens in current reserve proportions."}{" "}
+          ? "Bring every portfolio asset. Deposits follow current reserves, which may differ from target weights."
+          : "Receive all constituent tokens in current reserve proportions."}{" "}
         Amount bounds allow {config.slippageBps / 100}% reserve movement;
         otherwise the transaction reverts.
       </p>

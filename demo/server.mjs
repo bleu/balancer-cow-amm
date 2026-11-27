@@ -22,7 +22,7 @@ export function createApp(
   config,
   {
     chain = new Chain(config),
-    prices = new Prices(config),
+    prices = new Prices(config, { chain }),
     cow = new Cow(config),
     worker,
     pageHandler,
@@ -217,7 +217,7 @@ async function main() {
   const { port, host } = config;
   app.server.listen(port, host, () => {
     console.log(
-      `MAG7 demo: http://${host}:${port} (${
+      `Warden: http://${host}:${port} (${
         config.live ? "LIVE POSTING" : "read-only / dry-run curator"
       })`
     );

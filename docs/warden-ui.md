@@ -10,16 +10,16 @@ The eye is a small, recognizable outline in the wordmark, favicon and dialog hea
 
 Inspired by [CoinGecko’s light presentation](https://www.coingecko.com/), fresh green identifies primary actions and a pale-green introduction frames the eye. The rest of the app uses white cards on a soft-gray canvas, quiet borders and dark text. The pool dashboard is deliberately quieter than the introduction so numerical information leads. Green shades distinguish the allocation segments; the table also names each asset and shows numeric percentages.
 
-| Role | Color |
-| --- | --- |
-| Primary green | `#8dc647` |
-| Text/link green | `#347c20` |
+| Role                    | Color     |
+| ----------------------- | --------- |
+| Primary green           | `#8dc647` |
+| Text/link green         | `#347c20` |
 | Pale-green introduction | `#f0f8e9` |
-| Canvas | `#f8faf9` |
-| Surface | `#ffffff` |
-| Main text | `#18201b` |
-| Secondary text | `#687568` |
-| Borders | `#e2e8e1` |
+| Canvas                  | `#f8faf9` |
+| Surface                 | `#ffffff` |
+| Main text               | `#18201b` |
+| Secondary text          | `#687568` |
+| Borders                 | `#e2e8e1` |
 
 Manrope gives the wordmark and large headings a consistent shape while staying readable for asset names and figures. The Latin variable font is self-hosted with its SIL Open Font License; rendering does not require a request to a font provider.
 
@@ -35,7 +35,7 @@ Every existing setting remains: creator, curator, order lifetime, curator fee, a
 
 The eye does not imply that every pool has a live curator. Connecting, offline, not-enrolled, dry-run and live worker states remain distinct. A first price fetch says “Loading market prices…”; an error says “CoinGecko prices unavailable.” Reference-price source, timestamp and stale labels remain visible. Startup waiting is described as waiting for previous orders to expire.
 
-The redesign preserves the legacy browser cache key and catalog event, so existing locally saved pools and setup drafts remain available. Pool/contract names, addresses, weights, math, wallet transactions, canonical CoW appData and server configuration are unchanged. Creating a pool still requires all seven assets; public listing and curator enrollment remain separate.
+The redesign preserves the legacy browser cache key and catalog event, so existing locally saved pools and setup drafts remain available. The visual refactor preserves pool/contract names, addresses, weights, math, wallet transactions, canonical CoW appData and server configuration. Custom token and weight selection is described in [custom portfolios](custom-portfolios.md). Creating a pool requires seed amounts for every selected asset; public listing and curator enrollment remain separate.
 
 ## Responsive behavior and review
 
