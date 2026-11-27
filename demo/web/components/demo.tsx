@@ -43,6 +43,7 @@ const assetTints = [
   "#badf97",
   "#7ba35c",
   "#d2e8bc",
+  "#375f24",
 ];
 const assetTint = (index: number) => assetTints[index] ?? assetTints[0];
 function useCatalog() {
@@ -140,7 +141,7 @@ export function Demo({ config }: { config: DemoConfig }) {
     title = "";
   if (modal) {
     if (modal.kind === "create") {
-      title = "Create a MAG7 pool";
+      title = "Create a portfolio";
       dialog = (
         <CreateForm
           {...shared}
@@ -237,7 +238,9 @@ export function Demo({ config }: { config: DemoConfig }) {
           <a href="#">Explore baskets</a>
           <span aria-hidden="true">/</span>
           <span>
-            {address ? pool.data?.name ?? "Pool details" : "MAG7 collection"}
+            {address
+              ? pool.data?.name ?? "Pool details"
+              : "Portfolio collection"}
           </span>
         </nav>
         {config.localDev && (
@@ -401,7 +404,7 @@ function Catalog({
                 </h2>
                 <p className="note mt-3">
                   {config.factory
-                    ? "Create a MAG7 pool or add a known pool address. New pools stay in this browser until explicitly registered."
+                    ? "Create a custom portfolio, use the MAG7 preset, or add a known pool address. New pools stay in this browser until explicitly registered."
                     : "The MAG7 preset is configured. Deploy a demo factory and fund a pool to enable live wallet flows."}
                 </p>
               </div>
@@ -520,7 +523,7 @@ function PoolCard({
           : priceMessage
         : "Initialization pending";
     } catch {
-      value = "Prices unavailable";
+      value = "USD prices unavailable for this portfolio";
     }
   }
   return (
@@ -530,14 +533,17 @@ function PoolCard({
       className="pool-card"
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="basket-monogram">M7</span>
+        <span className="basket-monogram">
+          {pool.data?.symbol?.slice(0, 3) ?? "LP"}
+        </span>
         <span className="badge">
           {entry.public ? "Whitelisted" : "Saved locally"}
         </span>
       </div>
-      <h3 className="mt-6">{entry.name ?? pool.data?.name ?? "MAG7 pool"}</h3>
+      <h3 className="mt-6">{entry.name ?? pool.data?.name ?? "Portfolio"}</h3>
       <p className="mt-2 text-xs text-slate-500">
-        Seven assets · Fixed target weights
+        {pool.data ? `${pool.data.tokens.length} assets` : "Reading assets…"} ·
+        Fixed target weights
       </p>
       <div
         className="pool-card-value"
@@ -592,9 +598,10 @@ function Details({
   const totalWeight = pool.tokens.reduce((n, t) => n + BigInt(t.denorm), 0n);
   const stale =
     prices &&
-    Object.values(prices.values).some(
-      (p) => Date.now() / 1000 - p.updatedAt > config.priceMaxAgeSeconds
-    );
+    pool.tokens.some((t) => {
+      const p = prices.values[t.address.toLowerCase()];
+      return !p || Date.now() / 1000 - p.updatedAt > config.priceMaxAgeSeconds;
+    });
   const draft = saved.find(
     (p) => p.address?.toLowerCase() === pool.address.toLowerCase() && isDraft(p)
   );
@@ -630,7 +637,7 @@ function Details({
         <div className="min-w-0">
           <div className="detail-title">
             <span className="basket-monogram" aria-hidden="true">
-              M7
+              {pool.symbol.slice(0, 3)}
             </span>
             <div>
               <p className="eyebrow">
@@ -679,10 +686,12 @@ function Details({
           label="Pool value"
           value={view ? money(view.total) : "—"}
           detail={
-            prices
+            prices && view
               ? `${stale ? "Stale reference" : "Reference prices"} · ${new Date(
                   prices.fetchedAt * 1000
                 ).toLocaleTimeString()} · ${prices.source}`
+              : prices
+              ? "USD prices unavailable for this portfolio"
               : priceMessage
           }
         />
@@ -752,16 +761,12 @@ function Details({
           </span>
         </div>
         <div className="allocation-strip my-6">
-          {pool.tokens.map((t) => (
+          {pool.tokens.map((t, index) => (
             <span
               key={t.address}
               title={t.symbol}
               style={{
-                background: assetTint(
-                  config.assets.findIndex(
-                    (a) => a.address.toLowerCase() === t.address.toLowerCase()
-                  )
-                ),
+                background: assetTint(index),
                 flex: Number(
                   view?.assets.find((a) => a.address === t.address)?.value ??
                     t.denorm

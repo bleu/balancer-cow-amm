@@ -52,6 +52,7 @@
     "test:bnb": "FOUNDRY_LINT_LINT_ON_BUILD=false forge test --match-path test/bnb/*.t.sol -vv",
     "test:demo": "node --test demo/test/*.test.mjs",
     "test:demo:browser": "node demo/test/browser.mjs",
+    "test:demo:custom-browser": "node demo/test/browser-custom.mjs",
     "test:demo:local": "node --env-file=.local/demo.env demo/test/local-curator.mjs",
     "test:demo:network-browser": "node demo/test/browser-network.mjs",
     "test:echidna": "find test/invariants/fuzz -regex '.*\\.t\\.sol$' |cut -d '/' -f 4 | cut -d . -f 1 |xargs -I{} echidna test/invariants/fuzz/{}.t.sol --contract Fuzz{} --config test/invariants/fuzz/{}.yaml",

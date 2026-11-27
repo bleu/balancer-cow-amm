@@ -1,10 +1,12 @@
-# Warden: MAG7 baskets on BNB Chain and Base
+# Warden: custom portfolios and MAG7 on BNB Chain and Base
 
 **Set a portfolio. Warden watches it.**
 
 A wallet frontend and a single-process curator service for the [demo plan](../docs/base-mag7-demo.md). Defaults to production CoW on BNB Chain with Ondo stocks; explicit Base configuration retains the native B20 preset. The default configuration displays setup instructions: no funded Base factory or pool is bundled.
 
 The frontend creates and resumes pools, recovers abandoned seed assets, imports pools by address, joins/exits proportionally, reads reserves and current curator fees, and lets the creator replace the curator. Financial state comes from RPC. Creation addresses come from `factory.createdPool(creator, requestId)`, without log scanning or receipt event decoding.
+
+Choose the MAG7 preset or a custom portfolio with 2–8 ERC-20 tokens and your own weights. See [custom portfolios](../docs/custom-portfolios.md) for creation, recovery, pricing and curator enrollment. No new factory deployment is required for this feature.
 
 ## Frontend stack
 
@@ -101,6 +103,7 @@ The HTTP service binds to `127.0.0.1` by default. Put a public deployment behind
 pnpm demo:build                    # production Next build + TypeScript checks
 pnpm demo:typecheck                # standalone strict frontend typecheck
 pnpm test:demo                     # deterministic service/math/signing/security tests
+pnpm test:demo:custom-browser      # local custom-token creation/recovery and liquidity journey
 pnpm test:demo:local               # requires the deployed Anvil fixture; real pool curve + quote stub
 pnpm test:local:settlement         # pinned CoW settlement, seven-asset pool
 

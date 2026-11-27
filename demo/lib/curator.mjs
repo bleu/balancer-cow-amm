@@ -84,7 +84,7 @@ export class Curator {
     if (!signerAddress || lower(signerAddress) !== lower(snapshot.curator))
       throw Error("On-chain curator does not match server signer");
     if (snapshot.duration !== 180) throw Error("Unexpected order duration");
-    this.prices.assertFresh(priceSnapshot, snapshot.timestamp);
+    this.prices.assertFresh(priceSnapshot, snapshot.timestamp, snapshot.tokens);
   }
   async prepare(address, snapshot, pair, priceSnapshot) {
     const c = this.config,
@@ -285,7 +285,7 @@ export class Curator {
       }
       await this.waitActive();
       if (this.paused) return false;
-      this.emit("checking", "Hourly MAG7 evaluation", {
+      this.emit("checking", "Hourly portfolio evaluation", {
         lastCheck: Math.floor(this.now() / 1000),
         nextCheck: Math.floor(this.now() / 1000) + this.config.intervalSeconds,
       });
@@ -294,8 +294,18 @@ export class Curator {
         checkingPool = entry.address;
         this.emit("checking", "Reading pool state", { pool: entry.address });
         const processed = new Set();
-        for (let count = 0; count < 7 && !this.paused; count++) {
+        for (let count = 0; count < 8 && !this.paused; count++) {
           const snapshot = await this.chain.snapshot(entry.address);
+          try {
+            this.prices.assertFresh(
+              priceSnapshot,
+              snapshot.timestamp,
+              snapshot.tokens
+            );
+          } catch (e) {
+            this.emit("skipped", safeReason(e), { pool: entry.address });
+            break;
+          }
           await this.canSign(entry.address, snapshot, priceSnapshot);
           const pair = nextPair(
             portfolio(snapshot.tokens, priceSnapshot.values),

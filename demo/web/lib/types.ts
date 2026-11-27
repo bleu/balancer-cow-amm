@@ -25,6 +25,7 @@ export interface SavedPool {
   curator?: Address;
   feeBps?: number;
   seedAmounts?: string[];
+  assets?: Asset[];
   publicSwapFee?: string;
   solverOrdersEnabled?: boolean;
 }

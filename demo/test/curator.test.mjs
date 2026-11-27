@@ -144,3 +144,29 @@ test("An unfillable priority asset does not stop consideration of other assets",
   assert.equal(attempts, 7);
   assert.equal(f.posts, 0);
 });
+
+test("An unpriced custom pool is skipped without blocking another enrolled pool", async () => {
+  const f = fixture();
+  const unpriced = "0x0000000000000000000000000000000000000033";
+  f.config.curatedPools.unshift({ address: unpriced });
+  const snapshot = f.chain.snapshot;
+  f.chain.snapshot = async (address) => {
+    const s = await snapshot();
+    if (address === unpriced)
+      s.tokens = [
+        { ...s.tokens[0], address: unpriced, symbol: "UNKNOWN" },
+        s.tokens[1],
+      ];
+    return s;
+  };
+  f.worker.prices.assertFresh = (prices, time, tokens) => {
+    if (tokens.some((t) => !prices.values[lower(t.address)]))
+      throw Error("Missing price/timestamp for UNKNOWN");
+  };
+  await f.worker.initialize();
+  f.setTime(1181);
+  await f.worker.cycle();
+  assert.ok(f.posts > 0);
+  assert.equal(f.worker.status.pools[unpriced].state, "skipped");
+  assert.match(f.worker.status.pools[unpriced].reason, /Missing price/);
+});

@@ -89,3 +89,55 @@ test("Keyless one-address limit falls back once to paced per-token hourly reques
   await prices.get();
   assert.equal(calls, 8);
 });
+
+test("Only server-listed pools extend the hourly price watchlist; missing custom prices do not erase priced pools", async () => {
+  const extra = {
+    address: "0x0000000000000000000000000000000000000012",
+    symbol: "CUSTOM",
+  };
+  let reads = 0,
+    calls = 0;
+  const prices = new Prices(
+    {
+      ...config,
+      pools: [{ address: extra.address }],
+      curatedPools: [{ address: extra.address }],
+    },
+    {
+      now: () => 10000000,
+      chain: {
+        snapshot: async (address, options) => {
+          reads++;
+          assert.equal(address, extra.address);
+          assert.equal(options.strict, false);
+          return { tokens: [extra] };
+        },
+      },
+      request: async (url) => {
+        calls++;
+        assert.ok(
+          new URL(url).searchParams
+            .get("contract_addresses")
+            .includes(extra.address)
+        );
+        return Object.fromEntries(
+          ASSETS.map((a) => [
+            lower(a.address),
+            { usd: 100, last_updated_at: 10000 },
+          ])
+        );
+      },
+    }
+  );
+  const snapshot = await prices.get();
+  await prices.get();
+  assert.equal(reads, 1);
+  assert.equal(calls, 1);
+  assert.equal(Object.keys(snapshot.values).length, 7);
+  assert.match(prices.error, /CUSTOM/);
+  prices.assertFresh(snapshot, 10000, ASSETS);
+  assert.throws(
+    () => prices.assertFresh(snapshot, 10000, [extra]),
+    /Missing price/
+  );
+});

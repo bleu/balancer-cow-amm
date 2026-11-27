@@ -108,7 +108,7 @@ export function BasketEye() {
           strokeOpacity=".5"
         />
       </svg>
-      <span className="eye-caption">ONE BASKET. SEVEN PERSPECTIVES.</span>
+      <span className="eye-caption">YOUR PORTFOLIO. IN VIEW.</span>
     </div>
   );
 }
