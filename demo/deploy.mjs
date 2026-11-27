@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { ethers } from "ethers";
+import { createPublicClient, http } from "viem";
+import { base, bsc } from "viem/chains";
 import { safeReason } from "./lib/curator.mjs";
 import { networkProfile, SETTLEMENT, TRAMPOLINE } from "./lib/networks.mjs";
 
@@ -156,8 +158,17 @@ async function main() {
       JSON.stringify({ transactionHash: sent.hash }, null, 2) + "\n"
     );
     console.log("Broadcast " + sent.hash);
-    const receipt = await sent.wait(2);
-    if (receipt.status !== 1 || !receipt.contractAddress)
+    // BNB block/receipt extensions are not consistently parsed by ethers v5's
+    // confirmation waiter. Use viem's chain-aware receipt parser after broadcasting.
+    const publicClient = createPublicClient({
+      chain: chainId === 56 ? bsc : base,
+      transport: http(provider.connection.url),
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: sent.hash,
+      confirmations: 2,
+    });
+    if (receipt.status !== "success" || !receipt.contractAddress)
       throw Error("Deployment failed");
     const deployed = new ethers.Contract(
       receipt.contractAddress,
@@ -166,14 +177,16 @@ async function main() {
     );
     if (!(await deployed.POOL_SETTINGS_VERSION()).eq(2))
       throw Error("Unexpected factory version");
-    if ((await provider.getTransaction(sent.hash)).data !== tx.data)
+    if (
+      (await publicClient.getTransaction({ hash: sent.hash })).input !== tx.data
+    )
       throw Error("Deployment input mismatch");
     const report = {
       chainId,
       factory: receipt.contractAddress,
       admin,
       transactionHash: sent.hash,
-      block: receipt.blockNumber,
+      block: Number(receipt.blockNumber),
     };
     await fs.writeFile(
       new URL("deployment.json", dir),
